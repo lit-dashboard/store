@@ -1,5 +1,5 @@
 {
-  "name": "@lit-dashboard/store",
+  "name": "@webbitjs/store",
   "version": "1.0.0",
   "description": "",
   "main": "src/index.js",

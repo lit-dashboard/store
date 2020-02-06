@@ -5,6 +5,7 @@ import reduxStore from './redux-store';
 const managers = {};
 const providerTypes = {};
 const providers = {};
+const sourceProviderListeners = [];
 
 export const hasSourceManager = (providerName) => {
   return providerName in managers;
@@ -79,7 +80,18 @@ export const addSourceProvider = (providerType, providerName, settings) => {
   });
 
   addSourceManager(providerType, providerName);
+  sourceProviderListeners.forEach(listener => {
+    listener(providerName);
+  }); 
   return providers[providerName];
+};
+
+export const sourceProviderAdded = (listener) => {
+  if (typeof listener !== 'function') {
+    return;
+  }
+
+  sourceProviderListeners.push(listener);
 };
 
 export const removeSourceProvider = (providerName) => {
