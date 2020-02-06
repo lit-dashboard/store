@@ -1,17 +1,36 @@
 import babel from 'rollup-plugin-babel';
+import uglify from 'rollup-plugin-uglify-es';
 
-export default {
-  input: './src/index.js',
-  output: {
-    file: './dist/webbit-store.js',
-    format: 'umd',
-    name: 'WebbitStore',
-    globals: {
-      'redux': 'Redux',
-      'lodash': '_'
-    }
+export default [
+  {
+    input: './src/index.js',
+    output: {
+      file: './dist/webbit-store.js',
+      format: 'umd',
+      name: 'WebbitStore',
+      globals: {
+        'redux': 'Redux',
+        'lodash': '_'
+      }
+    },
+    plugins: [
+      babel()
+    ]
   },
-  plugins: [
-    babel()
-  ]
-}
+  {
+    input: './src/index.js',
+    output: {
+      file: './dist/webbit-store.min.js',
+      format: 'umd',
+      name: 'WebbitStore',
+      globals: {
+        'redux': 'Redux',
+        'lodash': '_'
+      }
+    },
+    plugins: [
+      babel(),
+      uglify()
+    ]
+  }
+]
