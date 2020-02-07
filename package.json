@@ -4,7 +4,6 @@
   "description": "",
   "main": "src/index.js",
   "dependencies": {
-    "lodash": "^4.17.15",
     "redux": "^4.0.5"
   },
   "devDependencies": {
@@ -14,7 +13,6 @@
     "@babel/plugin-proposal-class-properties": "^7.8.3",
     "@babel/plugin-proposal-decorators": "^7.8.3",
     "@babel/preset-env": "^7.8.4",
-    "@rollup/plugin-node-resolve": "^7.0.0",
     "rollup": "^1.31.0",
     "rollup-plugin-babel": "^4.3.3",
     "rollup-plugin-uglify-es": "0.0.1"

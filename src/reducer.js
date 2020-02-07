@@ -4,7 +4,6 @@ import {
   CLEAR_SOURCES,
   REMOVE_SOURCES
 } from './actions';
-import { forEach, isEmpty } from 'lodash';
 import { normalizeKey } from './util';
 
 const initialState = {
@@ -18,7 +17,7 @@ const rootReducer = (state = initialState, action) => {
 
       let newSources = { ...state.sources[action.payload.providerName] };
 
-      if (isEmpty(newSources)) {
+      if (Object.keys(newSources).length === 0) {
         newSources = {
           __normalizedKey__: undefined,
           __fromProvider__: false,
@@ -41,7 +40,7 @@ const rootReducer = (state = initialState, action) => {
       let { sourceChanges, providerName } = action.payload;
       let sourcesRoot = { ...state.sources[providerName] };
 
-      if (isEmpty(sourcesRoot)) {
+      if (Object.keys(sourcesRoot).length === 0) {
         sourcesRoot = {
           __normalizedKey__: undefined,
           __fromProvider__: false,
@@ -51,7 +50,10 @@ const rootReducer = (state = initialState, action) => {
         };
       }
 
-      forEach(sourceChanges, (value, key) => {
+      for (let key in sourceChanges) {
+
+        const value = sourceChanges[key];
+
         const keyParts = key.split('/');
         const normalizedKey = normalizeKey(key);
         const normalizedKeyParts = normalizedKey.split('/');
@@ -82,7 +84,7 @@ const rootReducer = (state = initialState, action) => {
             sources = sources[keyPart].__sources__;
           }
         });
-      });
+      }
 
       return {
         ...state,

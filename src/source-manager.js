@@ -1,5 +1,4 @@
 import { sourcesChanged } from './actions';
-import { forEach } from 'lodash';
 import reduxStore from './redux-store';
 import { normalizeKey } from './util';
 
@@ -57,7 +56,8 @@ export default class SourceManager {
     if (Object.keys(sources).length > 0) {
       let value = {};
 
-      forEach(sources, (source, propertyName) => {
+      for (let propertyName in sources) {
+        const source = sources[propertyName];
         const sourceValue = this.getSource(source.__key__);
         Object.defineProperty(value, propertyName, {
           get() {
@@ -70,7 +70,7 @@ export default class SourceManager {
             }
           }
         });
-      });
+      }
 
       return value;
     }
@@ -125,11 +125,13 @@ export default class SourceManager {
     // send first updates then last
     const firstUpdates = {};
     const lastUpdates = {};
-    forEach(this.sourceUpdates, (values, key) => {
+
+    for (let key in this.sourceUpdates) {
+      const values = this.sourceUpdates[key];
       firstUpdates[key] = values.first;
       if ('last' in values)
         lastUpdates[key] = values.last;
-    });
+    }
 
     reduxStore.dispatch(sourcesChanged(this.providerName, firstUpdates));
     if (Object.keys(lastUpdates).length > 0) {

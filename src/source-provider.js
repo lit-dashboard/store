@@ -1,10 +1,3 @@
-import { 
-  isString, 
-  isNumber, 
-  isBoolean, 
-  isArray, 
-  isNull,
-} from 'lodash';
 
 export default class SourceProvider {
   
@@ -26,15 +19,15 @@ export default class SourceProvider {
   updateFromDashboard() {}
 
   getType(value) {
-    if (isString(value)) {
+    if (typeof value === 'string') {
       return 'string';
-    } else if (isNumber(value)) {
+    } else if (typeof value === 'number') {
       return 'number';
-    } else if (isBoolean(value)) {
+    } else if (typeof value === 'boolean') {
       return 'boolean';
-    } else if (isArray(value)) {
+    } else if (value instanceof Array) {
       return 'Array';
-    } else if (isNull(value)) {
+    } else if (value === null) {
       return 'null';
     }
     return null;

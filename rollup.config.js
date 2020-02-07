@@ -9,8 +9,7 @@ export default [
       format: 'umd',
       name: 'WebbitStore',
       globals: {
-        'redux': 'Redux',
-        'lodash': '_'
+        'redux': 'Redux'
       }
     },
     plugins: [
@@ -24,8 +23,7 @@ export default [
       format: 'umd',
       name: 'WebbitStore',
       globals: {
-        'redux': 'Redux',
-        'lodash': '_'
+        'redux': 'Redux'
       }
     },
     plugins: [

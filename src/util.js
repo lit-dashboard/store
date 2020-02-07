@@ -1,4 +1,4 @@
-import { camelCase } from 'lodash';
+import camelCase from './camel-case';
 
 export const normalizeKey = (key) => {
   return key
