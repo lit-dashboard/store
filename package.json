@@ -23,12 +23,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lit-dashboard/store.git"
+    "url": "git+https://github.com/webbitjs/store.git"
   },
   "author": "Amory Galili",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/lit-dashboard/store/issues"
+    "url": "https://github.com/webbitjs/store/issues"
   },
-  "homepage": "https://github.com/lit-dashboard/store#readme"
+  "homepage": "https://github.com/webbitjs/store#readme"
 }
