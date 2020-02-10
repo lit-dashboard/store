@@ -2,48 +2,10 @@ import {
   initSources, 
   removeSources,
 } from './sources';
-import SourceManager from '../source-manager';
 
-const managers = {};
 const providerTypes = {};
 const providers = {};
 const sourceProviderListeners = [];
-
-export const hasSourceManager = (providerName) => {
-  return providerName in managers;
-};
-
-export const getSourceManager = (providerName) => {
-  return managers[providerName];
-};
-
-const addSourceManager = (providerType, providerName) => {
-  providerName = providerName || providerType;
-
-  if (
-    hasSourceManager(providerName) 
-    || !hasSourceProvider(providerName) 
-    || !hasSourceProviderType(providerType)
-  ) {
-    return;
-  }
-
-  managers[providerName] = new SourceManager(
-    getSourceProvider(providerName), 
-    providerName
-  );
-  initSources(providerName);
-};
-
-const removeSourceManager = (providerName) => {
-  if (!hasSourceManager(providerName)) {
-    return;
-  }
-  const manager = getSourceManager(providerName);
-  manager._disconnect();
-  removeSources(providerName);
-  delete managers[providerName];
-};
 
 export const addSourceProviderType = (constructor) => {
   
@@ -76,12 +38,11 @@ export const addSourceProvider = (providerType, providerName, settings) => {
 
   const SourceProvider = providerTypes[providerType];
 
-  providers[providerName] = new SourceProvider({
+  providers[providerName] = new SourceProvider(providerName, {
     ...SourceProvider.settingsDefaults,
     ...settings
   });
 
-  addSourceManager(providerType, providerName);
   sourceProviderListeners.forEach(listener => {
     listener(providerName);
   }); 
@@ -98,12 +59,13 @@ export const sourceProviderAdded = (listener) => {
 };
 
 export const removeSourceProvider = (providerName) => {
-  if (!hasSourceProvider(providerType)) {
+  if (!hasSourceProvider(providerName)) {
     return;
   }
 
+  const provider = providers[providerName];
+  provider._disconnect();
   delete providers[providerName];
-  removeSourceManager(providerName);
 }
 
 export const getSourceProvider = (providerName) => {
