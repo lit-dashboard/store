@@ -1,8 +1,8 @@
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('redux')) :
-  typeof define === 'function' && define.amd ? define(['exports', 'redux'], factory) :
-  (global = global || self, factory(global.WebbitStore = {}, global.Redux));
-}(this, (function (exports, redux) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (global = global || self, factory(global.WebbitStore = {}));
+}(this, (function (exports) { 'use strict';
 
   class SourceProvider {
     static get typeName() {
@@ -39,85 +39,6 @@
       return null;
     }
 
-  }
-
-  var INIT_SOURCES = "INIT_SOURCES";
-  var CLEAR_SOURCES = "CLEAR_SOURCES";
-  var REMOVE_SOURCES = "REMOVE_SOURCES";
-  var SOURCES_CHANGED = "SOURCES_CHANGED";
-  function initSources(providerName) {
-    return {
-      type: INIT_SOURCES,
-      payload: {
-        providerName
-      }
-    };
-  }
-  function removeSources(providerName) {
-    return {
-      type: REMOVE_SOURCES,
-      payload: {
-        providerName
-      }
-    };
-  }
-  function sourcesChanged(providerName, sourceChanges) {
-    return {
-      type: SOURCES_CHANGED,
-      payload: {
-        providerName,
-        sourceChanges
-      }
-    };
-  }
-
-  function _defineProperty(obj, key, value) {
-    if (key in obj) {
-      Object.defineProperty(obj, key, {
-        value: value,
-        enumerable: true,
-        configurable: true,
-        writable: true
-      });
-    } else {
-      obj[key] = value;
-    }
-
-    return obj;
-  }
-
-  function ownKeys(object, enumerableOnly) {
-    var keys = Object.keys(object);
-
-    if (Object.getOwnPropertySymbols) {
-      var symbols = Object.getOwnPropertySymbols(object);
-      if (enumerableOnly) symbols = symbols.filter(function (sym) {
-        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
-      });
-      keys.push.apply(keys, symbols);
-    }
-
-    return keys;
-  }
-
-  function _objectSpread2(target) {
-    for (var i = 1; i < arguments.length; i++) {
-      var source = arguments[i] != null ? arguments[i] : {};
-
-      if (i % 2) {
-        ownKeys(Object(source), true).forEach(function (key) {
-          _defineProperty(target, key, source[key]);
-        });
-      } else if (Object.getOwnPropertyDescriptors) {
-        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
-      } else {
-        ownKeys(Object(source)).forEach(function (key) {
-          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
-        });
-      }
-    }
-
-    return target;
   }
 
   /**
@@ -868,274 +789,53 @@
     return key.split('/').map(keyPart => camelCase(keyPart)).join('/');
   };
 
-  var initialState = {
-    sources: {}
-  };
-
-  var rootReducer = function rootReducer() {
-    var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : initialState;
-    var action = arguments.length > 1 ? arguments[1] : undefined;
-
-    switch (action.type) {
-      case INIT_SOURCES:
-        var newSources = _objectSpread2({}, state.sources[action.payload.providerName]);
-
-        if (Object.keys(newSources).length === 0) {
-          newSources = {
-            __normalizedKey__: undefined,
-            __fromProvider__: false,
-            __key__: undefined,
-            __value__: undefined,
-            __sources__: {}
-          };
-        }
-
-        return _objectSpread2({}, state, {
-          sources: _objectSpread2({}, state.sources, {
-            [action.payload.providerName]: newSources
-          })
-        });
-
-      case SOURCES_CHANGED:
-        var {
-          sourceChanges,
-          providerName
-        } = action.payload;
-
-        var sourcesRoot = _objectSpread2({}, state.sources[providerName]);
-
-        if (Object.keys(sourcesRoot).length === 0) {
-          sourcesRoot = {
-            __normalizedKey__: undefined,
-            __fromProvider__: false,
-            __key__: undefined,
-            __value__: undefined,
-            __sources__: {}
-          };
-        }
-
-        var _loop = function _loop(key) {
-          var value = sourceChanges[key];
-          var keyParts = key.split('/');
-          var normalizedKey = normalizeKey(key);
-          var normalizedKeyParts = normalizedKey.split('/');
-          var sources = sourcesRoot.__sources__;
-          normalizedKeyParts.forEach((keyPart, index) => {
-            var inSources = keyPart in sources;
-
-            if (!inSources) {
-              sources[keyPart] = {
-                __fromProvider__: false,
-                __normalizedKey__: normalizedKeyParts.slice(0, index + 1).join('/'),
-                __key__: keyParts.slice(0, index + 1).join('/'),
-                __value__: undefined,
-                __sources__: {}
-              };
-            }
-
-            if (normalizedKeyParts.length - 1 === index) {
-              sources[keyPart].__fromProvider__ = true;
-
-              if (typeof value !== 'undefined') {
-                sources[keyPart].__value__ = value;
-              }
-            } else {
-              sources = sources[keyPart].__sources__;
-            }
-          });
-        };
-
-        for (var key in sourceChanges) {
-          _loop(key);
-        }
-
-        return _objectSpread2({}, state, {
-          sources: _objectSpread2({}, state.sources, {
-            [providerName]: sourcesRoot
-          })
-        });
-
-      case CLEAR_SOURCES:
-        var shouldClear = action.payload.providerName in state.sources;
-
-        if (!shouldClear) {
-          return state;
-        }
-
-        return _objectSpread2({}, state, {
-          sources: _objectSpread2({}, state.sources, {
-            [action.payload.providerName]: {
-              __fromProvider__: false,
-              __normalizedKey__: undefined,
-              __key__: undefined,
-              __value__: undefined,
-              __sources__: {}
-            }
-          })
-        });
-
-      case REMOVE_SOURCES:
-        var allSources = _objectSpread2({}, state.sources);
-
-        delete allSources[action.payload.providerName];
-        return _objectSpread2({}, state, {
-          sources: allSources
-        });
-
-      default:
-        return state;
-    }
-  };
-
-  var reduxStore = redux.createStore(rootReducer);
-
-  class SourceManager {
-    constructor(provider, providerName) {
-      this.providerName = providerName;
-      this.provider = provider;
-      this.sourceUpdates = {};
-      this.provider.updateFromProvider(this._updateSource.bind(this));
-      this.interval = setInterval(this._sendUpdates.bind(this), 100);
-    }
-
-    _disconnect() {
-      clearTimeout(this.interval);
-    }
-
-    _updateSource(key, value) {
-      if (this.sourceUpdates[key] === undefined) {
-        this.sourceUpdates[key] = {
-          first: value
-        };
-      } else {
-        this.sourceUpdates[key].last = value;
-      }
-    }
-
-    subscribe(key, callback, callImmediately) {
-      var unsubscribe = reduxStore.subscribe(() => {
-        callback(this.getSource(key));
+  function _defineProperty(obj, key, value) {
+    if (key in obj) {
+      Object.defineProperty(obj, key, {
+        value: value,
+        enumerable: true,
+        configurable: true,
+        writable: true
       });
-
-      if (callImmediately) {
-        callback(this.getSource(key));
-      }
-
-      return unsubscribe;
+    } else {
+      obj[key] = value;
     }
 
-    getSource(key) {
-      var _this = this;
+    return obj;
+  }
 
-      key = key || '';
-      var source = this.getRawSource(key);
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
 
-      if (!source) {
-        return undefined;
-      }
-
-      var rawValue = source.__value__;
-      var sources = source.__sources__;
-      var sourceProvider = this.provider;
-
-      if (Object.keys(sources).length > 0) {
-        var value = {};
-
-        var _loop = function _loop(propertyName) {
-          var source = sources[propertyName];
-
-          var sourceValue = _this.getSource(source.__key__);
-
-          Object.defineProperty(value, propertyName, {
-            get() {
-              return sourceValue;
-            },
-
-            set(value) {
-              var sourceKey = source.__key__;
-
-              if (typeof sourceKey === 'string' && sourceProvider) {
-                sourceProvider.updateFromDashboard(sourceKey, value);
-              }
-            }
-
-          });
-        };
-
-        for (var propertyName in sources) {
-          _loop(propertyName);
-        }
-
-        return value;
-      }
-
-      if (typeof rawValue === 'boolean') {
-        return rawValue;
-      } else if (typeof rawValue === 'number') {
-        return rawValue;
-      } else if (typeof rawValue === 'string') {
-        return rawValue;
-      } else if (rawValue instanceof Array) {
-        return [...rawValue];
-      }
-
-      return {};
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+      if (enumerableOnly) symbols = symbols.filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+      });
+      keys.push.apply(keys, symbols);
     }
 
-    getRawSource(key) {
-      key = key || '';
-      var sourcesRoot = reduxStore.getState().sources[this.providerName];
+    return keys;
+  }
 
-      if (typeof sourcesRoot === 'undefined') {
-        return null;
-      }
+  function _objectSpread2(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i] != null ? arguments[i] : {};
 
-      var keyParts = normalizeKey(key).split('/');
-      var sources = sourcesRoot.__sources__;
-
-      for (var index in keyParts) {
-        var keyPart = keyParts[index];
-
-        if (keyParts.length - 1 === parseInt(index)) {
-          return keyPart in sources ? sources[keyPart] : null;
-        }
-
-        if (keyPart in sources) {
-          sources = sources[keyPart].__sources__;
-        } else {
-          return null;
-        }
-      }
-
-      return null;
-    }
-
-    _sendUpdates() {
-      if (Object.keys(this.sourceUpdates).length === 0) {
-        return;
-      } // send first updates then last
-
-
-      var firstUpdates = {};
-      var lastUpdates = {};
-
-      for (var key in this.sourceUpdates) {
-        var values = this.sourceUpdates[key];
-        firstUpdates[key] = values.first;
-        if ('last' in values) lastUpdates[key] = values.last;
-      }
-
-      reduxStore.dispatch(sourcesChanged(this.providerName, firstUpdates));
-
-      if (Object.keys(lastUpdates).length > 0) {
-        setTimeout(() => {
-          reduxStore.dispatch(sourcesChanged(this.providerName, lastUpdates));
+      if (i % 2) {
+        ownKeys(Object(source), true).forEach(function (key) {
+          _defineProperty(target, key, source[key]);
+        });
+      } else if (Object.getOwnPropertyDescriptors) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+      } else {
+        ownKeys(Object(source)).forEach(function (key) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
         });
       }
-
-      this.sourceUpdates = {};
     }
 
+    return target;
   }
 
   var managers = {};
@@ -1157,7 +857,7 @@
     }
 
     managers[providerName] = new SourceManager(getSourceProvider(providerName), providerName);
-    reduxStore.dispatch(initSources(providerName));
+    initSources(providerName);
   };
 
   var removeSourceManager = providerName => {
@@ -1169,7 +869,7 @@
 
     manager._disconnect();
 
-    reduxStore.dispatch(removeSources(providerName));
+    removeSources(providerName);
     delete managers[providerName];
   };
 
@@ -1236,8 +936,309 @@
     return providerName in providers;
   };
   var getState = () => {
-    return reduxStore.getState();
+    return getAllSources();
   };
+
+  var rawSources = {};
+  var sources = {};
+  var subscribers = {};
+  var nextSubscriberId = 0;
+
+  var createRawSource = () => {
+    return {
+      __normalizedKey__: undefined,
+      __fromProvider__: false,
+      __key__: undefined,
+      __value__: undefined,
+      __sources__: {}
+    };
+  };
+
+  var createSource = () => {
+    return {
+      getters: {},
+      setters: {},
+      sources: {}
+    };
+  };
+
+  var noopSourceSetters = providerName => {
+    if (typeof sources[providerName] === 'undefined') {
+      return;
+    }
+
+    for (var key in sources[providerName].setters) {
+      sources[providerName].setters[key] = () => {};
+    }
+  };
+
+  var notifySubscribers = () => {
+    for (var id in subscribers) {
+      var subscriber = subscribers[id];
+      subscriber();
+    }
+  };
+
+  var getSources = providerName => {
+    return rawSources[providerName];
+  };
+  var getAllSources = () => {
+    return rawSources;
+  };
+  var subscribe = subscriber => {
+    if (typeof subscriber !== 'function') {
+      throw new Error('Callback is not a function');
+    }
+
+    var id = nextSubscriberId;
+    nextSubscriberId++;
+    subscribers[id] = subscriber;
+
+    var unsubscribe = () => {
+      delete subscribers[id];
+    };
+
+    return unsubscribe;
+  };
+  var initSources = providerName => {
+    if (providerName in rawSources) {
+      return;
+    }
+
+    rawSources[providerName] = createRawSource();
+    sources[providerName] = createSource();
+    notifySubscribers();
+  };
+  var removeSources = providerName => {
+    delete rawSources[providerName];
+    noopSourceSetters(providerName);
+    delete sources[providerName];
+    notifySubscribers();
+  };
+  var sourcesChanged = (providerName, sourceChanges) => {
+    if (typeof rawSources[providerName] === 'undefined') {
+      rawSources[providerName] = createRawSource();
+      sources[providerName] = createSource();
+    }
+
+    var sourcesRoot = rawSources[providerName];
+
+    var _loop = function _loop(key) {
+      var value = sourceChanges[key];
+      var keyParts = key.split('/');
+      var normalizedKey = normalizeKey(key);
+      var normalizedKeyParts = normalizedKey.split('/');
+      var rawSources = sourcesRoot.__sources__;
+      normalizedKeyParts.forEach((keyPart, index) => {
+        var inSources = keyPart in rawSources;
+        var sourceKey = keyParts.slice(0, index + 1).join('/');
+        var providerSources = sources[providerName];
+
+        if (!inSources) {
+          rawSources[keyPart] = {
+            __fromProvider__: false,
+            __normalizedKey__: normalizedKeyParts.slice(0, index + 1).join('/'),
+            __key__: sourceKey,
+            __value__: undefined,
+            __sources__: {}
+          };
+
+          providerSources.getters[sourceKey] = () => {
+            return {};
+          };
+
+          providerSources.setters[sourceKey] = () => {};
+
+          Object.defineProperty(providerSources.sources, sourceKey, {
+            set(value) {
+              providerSources.setters[sourceKey](value);
+            },
+
+            get() {
+              return providerSources.getters[sourceKey]();
+            }
+
+          });
+        }
+
+        if (normalizedKeyParts.length - 1 === index) {
+          rawSources[keyPart].__fromProvider__ = true;
+          rawSources[keyPart].__value__ = value;
+
+          if (Object.keys(rawSources[keyPart].__sources__).length === 0) {
+            providerSources.getters[sourceKey] = () => {
+              return value;
+            };
+
+            var sourceProvider = getSourceProvider(providerName);
+
+            providerSources.setters[sourceKey] = value => {
+              sourceProvider.updateFromDashboard(sourceKey, value);
+            };
+          }
+        } else {
+          rawSources = rawSources[keyPart].__sources__;
+        }
+      });
+    };
+
+    for (var key in sourceChanges) {
+      _loop(key);
+    }
+
+    notifySubscribers();
+  };
+
+  class SourceManager {
+    constructor(provider, providerName) {
+      this.providerName = providerName;
+      this.provider = provider;
+      this.sourceUpdates = {};
+      this.provider.updateFromProvider(this._updateSource.bind(this));
+      this.interval = setInterval(this._sendUpdates.bind(this), 100);
+    }
+
+    _disconnect() {
+      clearTimeout(this.interval);
+    }
+
+    _updateSource(key, value) {
+      if (this.sourceUpdates[key] === undefined) {
+        this.sourceUpdates[key] = {
+          first: value
+        };
+      } else {
+        this.sourceUpdates[key].last = value;
+      }
+    }
+
+    subscribe(key, callback, callImmediately) {
+      var unsubscribe = subscribe(() => {
+        callback(this.getSource(key));
+      });
+
+      if (callImmediately) {
+        callback(this.getSource(key));
+      }
+
+      return unsubscribe;
+    }
+
+    getSource(key) {
+      var _this = this;
+
+      var source = this.getRawSource(key);
+
+      if (!source) {
+        return undefined;
+      }
+
+      var rawValue = source.__value__;
+      var sources = source.__sources__;
+      var sourceProvider = this.provider;
+
+      if (Object.keys(sources).length > 0) {
+        var value = {};
+
+        var _loop = function _loop(propertyName) {
+          var source = sources[propertyName];
+
+          var sourceValue = _this.getSource(source.__key__);
+
+          Object.defineProperty(value, propertyName, {
+            get() {
+              return sourceValue;
+            },
+
+            set(value) {
+              var sourceKey = source.__key__;
+
+              if (typeof sourceKey === 'string' && sourceProvider) {
+                sourceProvider.updateFromDashboard(sourceKey, value);
+              }
+            }
+
+          });
+        };
+
+        for (var propertyName in sources) {
+          _loop(propertyName);
+        }
+
+        return value;
+      }
+
+      if (typeof rawValue === 'boolean') {
+        return rawValue;
+      } else if (typeof rawValue === 'number') {
+        return rawValue;
+      } else if (typeof rawValue === 'string') {
+        return rawValue;
+      } else if (rawValue instanceof Array) {
+        return [...rawValue];
+      }
+
+      return {};
+    }
+
+    getRawSource(key) {
+      var sourcesRoot = getSources(this.providerName);
+
+      if (typeof sourcesRoot === 'undefined') {
+        return null;
+      }
+
+      if (typeof key !== 'string') {
+        return sourcesRoot;
+      }
+
+      var keyParts = normalizeKey(key).split('/');
+      var sources = sourcesRoot.__sources__;
+
+      for (var index in keyParts) {
+        var keyPart = keyParts[index];
+
+        if (keyParts.length - 1 === parseInt(index)) {
+          return keyPart in sources ? sources[keyPart] : null;
+        }
+
+        if (keyPart in sources) {
+          sources = sources[keyPart].__sources__;
+        } else {
+          return null;
+        }
+      }
+
+      return null;
+    }
+
+    _sendUpdates() {
+      if (Object.keys(this.sourceUpdates).length === 0) {
+        return;
+      } // send first updates then last
+
+
+      var firstUpdates = {};
+      var lastUpdates = {};
+
+      for (var key in this.sourceUpdates) {
+        var values = this.sourceUpdates[key];
+        firstUpdates[key] = values.first;
+        if ('last' in values) lastUpdates[key] = values.last;
+      }
+
+      sourcesChanged(this.providerName, firstUpdates);
+
+      if (Object.keys(lastUpdates).length > 0) {
+        setTimeout(() => {
+          sourcesChanged(this.providerName, lastUpdates);
+        });
+      }
+
+      this.sourceUpdates = {};
+    }
+
+  }
 
   var SourceProvider$1 = SourceProvider;
   var SourceManager$1 = SourceManager;

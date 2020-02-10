@@ -1,6 +1,8 @@
-import { initSources, removeSources } from './actions';
-import SourceManager from './source-manager';
-import reduxStore from './redux-store';
+import { 
+  initSources, 
+  removeSources,
+} from './sources';
+import SourceManager from '../source-manager';
 
 const managers = {};
 const providerTypes = {};
@@ -30,7 +32,7 @@ const addSourceManager = (providerType, providerName) => {
     getSourceProvider(providerName), 
     providerName
   );
-  reduxStore.dispatch(initSources(providerName));
+  initSources(providerName);
 };
 
 const removeSourceManager = (providerName) => {
@@ -39,7 +41,7 @@ const removeSourceManager = (providerName) => {
   }
   const manager = getSourceManager(providerName);
   manager._disconnect();
-  reduxStore.dispatch(removeSources(providerName));
+  removeSources(providerName);
   delete managers[providerName];
 };
 
@@ -87,6 +89,7 @@ export const addSourceProvider = (providerType, providerName, settings) => {
 };
 
 export const sourceProviderAdded = (listener) => {
+
   if (typeof listener !== 'function') {
     return;
   }
@@ -119,6 +122,4 @@ export const hasSourceProvider = (providerName) => {
   return providerName in providers;
 };
 
-export const getState = () => {
-  return reduxStore.getState();
-};
+export { getSources, getSource } from './sources';

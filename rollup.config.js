@@ -1,5 +1,6 @@
 import babel from 'rollup-plugin-babel';
 import uglify from 'rollup-plugin-uglify-es';
+import resolve from '@rollup/plugin-node-resolve';
 
 export default [
   {
@@ -7,12 +8,10 @@ export default [
     output: {
       file: './dist/webbit-store.js',
       format: 'umd',
-      name: 'WebbitStore',
-      globals: {
-        'redux': 'Redux'
-      }
+      name: 'WebbitStore'
     },
     plugins: [
+      resolve(),
       babel()
     ]
   },
@@ -21,12 +20,10 @@ export default [
     output: {
       file: './dist/webbit-store.min.js',
       format: 'umd',
-      name: 'WebbitStore',
-      globals: {
-        'redux': 'Redux'
-      }
+      name: 'WebbitStore'
     },
     plugins: [
+      resolve(),
       babel(),
       uglify()
     ]
