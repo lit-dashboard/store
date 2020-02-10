@@ -2,7 +2,8 @@ import {
   subscribe,
   sourcesChanged,
   getRawSource,
-  getSource
+  getSource,
+  clearSources
 } from './store/sources';
 
 export default class SourceProvider {
@@ -55,6 +56,10 @@ export default class SourceProvider {
 
   getRawSource(key) {
     return getRawSource(this._providerName, key);
+  }
+
+  clearSources() {
+    clearSources(this._providerName);
   }
 
   onSettingsChange(settings) {}
