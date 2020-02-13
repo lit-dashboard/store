@@ -25,20 +25,91 @@ const createSource = () => {
   };
 };
 
-const noopSourceSetters = (providerName) => {
-  if (typeof sources[providerName] === 'undefined') {
-    return;
-  }
-
-  for (let key in sources[providerName].setters) {
-    sources[providerName].setters[key] = () => {};
-  }
-};
-
 const notifySubscribers = () => {
   for (let id in subscribers) {
     const subscriber = subscribers[id];
     subscriber();
+  }
+};
+
+const cleanSource = (providerName, rawSources, normalizedKeyParts) => {
+  if (normalizedKeyParts.length === 0) {
+    return;
+  }
+
+  const keyPart = normalizedKeyParts[0];
+
+  const rawSource = rawSources[keyPart];
+
+  if (typeof rawSource === 'undefined') {
+    return;
+  }
+
+  if (normalizedKeyParts.length > 1) {
+    cleanSource(providerName, rawSource.__sources__, normalizedKeyParts.slice(1));
+  }
+
+  if (
+    Object.keys(rawSource.__sources__).length === 0 &&
+    !rawSource.__fromProvider__
+  ) {
+    delete rawSources[keyPart];
+  }
+
+  if (typeof rawSources[keyPart] === 'undefined') {
+    delete sources[providerName].sources[rawSource.__key__];
+    delete sources[providerName].getters[rawSource.__key__];
+    delete sources[providerName].setters[rawSource.__key__];
+    return;
+  }
+
+  const value = {};
+  for (let key in rawSource.__sources__) {
+    const rawSubSource = rawSource.__sources__[key];
+    Object.defineProperty(value, key, {
+      set(value) {
+        const providerSources = sources[providerName];
+        
+        if (typeof providerSources === 'undefined') {
+          return;
+        }
+
+        const setter = providerSources.setters[rawSubSource.__key__];
+
+        if (typeof setter === 'undefined') {
+          return;
+        }
+
+        setter(value);
+      },
+      get() {
+        const providerSources = sources[providerName];
+
+        if (typeof providerSources === 'undefined') {
+          return {};
+        }
+
+        const getter = providerSources.getters[rawSubSource.__key__];
+
+        if (typeof getter === 'undefined') {
+          return {};
+        }
+
+        return getter();
+      }
+    });
+  }
+
+  const providerSources = sources[providerName];
+
+  if (Object.getOwnPropertyNames(value).length > 0) {
+    providerSources.getters[rawSource.__key__] = () => {
+      return value;
+    };
+  } else if (rawSource.__fromProvider__) {
+    providerSources.getters[rawSource.__key__] = () => {
+      return rawSource.__value__;
+    };
   }
 };
 
@@ -129,7 +200,6 @@ export const clearSources = (providerName) => {
   }
 
   rawSources[providerName] = createRawSource();
-  noopSourceSetters(providerName);
   sources[providerName] = createSource();
 
   notifySubscribers();
@@ -140,6 +210,40 @@ export const removeSources = (providerName) => {
   noopSourceSetters(providerName);
   delete sources[providerName];
   notifySubscribers();
+};
+
+export const sourcesRemoved = (providerName, sourceRemovals) => {
+  if (typeof rawSources[providerName] === 'undefined') {
+    return;
+  }
+
+  const sourcesRoot = rawSources[providerName];
+
+  for (let key of sourceRemovals) {
+    const normalizedKey = normalizeKey(key);
+    const normalizedKeyParts = normalizedKey.split('/');
+
+    let rawSources = sourcesRoot.__sources__;
+
+    for (let index in normalizedKeyParts) {
+
+      const keyPart = normalizedKeyParts[index];
+      const inSources = keyPart in rawSources;
+
+      if (!inSources) {
+        break;
+      }
+
+      if (normalizedKeyParts.length - 1 === parseInt(index)) {
+        rawSources[keyPart].__fromProvider__ = false;
+        rawSources[keyPart].__value__ = undefined;
+      }
+
+      rawSources = rawSources[keyPart].__sources__;
+    }
+
+    cleanSource(providerName, sourcesRoot.__sources__, normalizedKeyParts);
+  }
 };
 
 export const sourcesChanged = (providerName, sourceChanges) => {
@@ -181,11 +285,36 @@ export const sourcesChanged = (providerName, sourceChanges) => {
         };
         providerSources.setters[sourceKey] = () => {};
         Object.defineProperty(providerSources.sources, sourceKey, {
-          set(value) {
-            providerSources.setters[sourceKey](value);
+          configurable: true,
+          set(value) {     
+            const providerSources = sources[providerName];
+
+            if (typeof providerSources === 'undefined') {
+              return;
+            }
+
+            const setter = providerSources.setters[sourceKey];
+
+            if (typeof setter === 'undefined') {
+              return;
+            }
+
+            setter(value);
           },
           get() {
-            return providerSources.getters[sourceKey]();
+            const providerSources = sources[providerName];
+
+            if (typeof providerSources === 'undefined') {
+              return {};
+            }
+
+            const getter = providerSources.getters[sourceKey];
+
+            if (typeof getter === 'undefined') {
+              return {};
+            }
+
+            return getter();
           }
         });
       }
@@ -215,15 +344,48 @@ export const sourcesChanged = (providerName, sourceChanges) => {
           const rawSource = rawSources[key];
           Object.defineProperty(value, key, {
             set(value) {
-              providerSources.setters[rawSource.__key__](value);
+              const providerSources = sources[providerName];
+              
+              if (typeof providerSources === 'undefined') {
+                return;
+              }
+
+              const setter = providerSources.setters[rawSource.__key__];
+
+              if (typeof setter === 'undefined') {
+                return;
+              }
+
+              setter(value);
             },
             get() {
-              return providerSources.getters[rawSource.__key__]();
+              const providerSources = sources[providerName];
+
+              if (typeof providerSources === 'undefined') {
+                return {};
+              }
+
+              const getter = providerSources.getters[rawSource.__key__];
+
+              if (typeof getter === 'undefined') {
+                return {};
+              }
+
+              return getter();
             }
           });
         }
         
         providerSources.getters[prevRawSource.__key__] = () => {
+          const providerSources = sources[providerName];
+
+          if (
+            typeof providerSources === 'undefined' ||
+            typeof providerSources.getters[prevRawSource.__key__] === 'undefined'
+          ) {
+            return {};
+          }
+
           return value;
         };
       }

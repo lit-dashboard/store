@@ -1,7 +1,4 @@
-import { 
-  initSources, 
-  removeSources,
-} from './sources';
+
 
 const providerTypes = {};
 const providers = {};
@@ -84,4 +81,4 @@ export const hasSourceProvider = (providerName) => {
   return providerName in providers;
 };
 
-export { getSources, getSource } from './sources';
+export { getSources, getSource, sourcesRemoved } from './sources';
