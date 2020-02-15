@@ -5,6 +5,7 @@ class Source {}
 
 const rawSources = {};
 const sources = {};
+const sourceObjectRefs = {};
 
 const subscribers = {};
 let nextSubscriberId = 0;
@@ -25,6 +26,62 @@ const createSource = () => {
     setters: {},
     sources: {}
   };
+};
+
+const getSourceObject = (providerName, key) => {
+  if (typeof sourceObjectRefs[providerName] === 'undefined') {
+    sourceObjectRefs[providerName] = {};
+  }
+
+  if (typeof sourceObjectRefs[providerName][key] === 'undefined') {
+    sourceObjectRefs[providerName][key] = new Source();
+  }
+
+  return sourceObjectRefs[providerName][key];
+};
+
+const setSourceObjectProps = (providerName, key, rawSource) => {
+  const value = getSourceObject(providerName, key);
+
+  Object.getOwnPropertyNames(value).forEach(prop => {
+    if (prop in rawSource.__sources__) {
+      return;
+    }
+    delete value[prop];
+  });
+
+  for (let key in rawSource.__sources__) {
+
+    if (key in value) {
+      continue;
+    }
+
+    const rawSubSource = rawSource.__sources__[key];
+    Object.defineProperty(value, key, {
+      configurable: true,
+      set(value) {
+        const providerSources = sources[providerName];
+        
+        if (typeof providerSources === 'undefined') {
+          return;
+        }
+
+        const setter = providerSources.setters[rawSubSource.__key__];
+
+        if (typeof setter === 'undefined') {
+          return;
+        }
+
+        setter(value);
+      },
+      get() {
+        if (typeof sources[providerName] === 'undefined') {
+          return undefined;
+        }
+        return sources[providerName].getterValues[rawSubSource.__key__];
+      }
+    });
+  }
 };
 
 const notifySubscribers = () => {
@@ -71,55 +128,10 @@ const cleanSource = (providerName, rawSources, normalizedKeyParts) => {
 
   const providerSources = sources[providerName];
 
+  setSourceObjectProps(providerName, rawSource.__key__, rawSource);
+  
   if (Object.keys(rawSource.__sources__).length === 0) {
     providerSources.getterValues[rawSource.__key__] = rawSource.__value__;
-    return true;
-  }
-
-  if (!isSourceType(providerSources.getterValues[rawSource.__key__])) {
-    providerSources.getterValues[rawSource.__key__] = new Source();
-  }
-
-  const value = providerSources.getterValues[rawSource.__key__];
-
-  Object.getOwnPropertyNames(value).forEach(prop => {
-    if (prop in rawSource.__sources__) {
-      return;
-    }
-    delete value[prop];
-  });
-
-  for (let key in rawSource.__sources__) {
-
-    if (key in value) {
-      continue;
-    }
-
-    const rawSubSource = rawSource.__sources__[key];
-    Object.defineProperty(value, key, {
-      configurable: true,
-      set(value) {
-        const providerSources = sources[providerName];
-        
-        if (typeof providerSources === 'undefined') {
-          return;
-        }
-
-        const setter = providerSources.setters[rawSubSource.__key__];
-
-        if (typeof setter === 'undefined') {
-          return;
-        }
-
-        setter(value);
-      },
-      get() {
-        if (typeof sources[providerName] === 'undefined') {
-          return undefined;
-        }
-        return sources[providerName].getterValues[rawSubSource.__key__];
-      }
-    });
   }
 
   return true;
@@ -316,7 +328,7 @@ export const sourcesChanged = (providerName, sourceChanges) => {
           __sources__: {}
         }
 
-        providerSources.getterValues[sourceKey] = new Source();
+        providerSources.getterValues[sourceKey] = getSourceObject(providerName, sourceKey);
         providerSources.setters[sourceKey] = () => {};
         Object.defineProperty(providerSources.sources, sourceKey, {
           configurable: true,
@@ -363,43 +375,10 @@ export const sourcesChanged = (providerName, sourceChanges) => {
       if (index !== 0) {
 
         if (!isSourceType(providerSources.getterValues[prevRawSource.__key__])) {
-          providerSources.getterValues[prevRawSource.__key__] = new Source();
+          providerSources.getterValues[prevRawSource.__key__] = getSourceObject(providerName, prevRawSource.__key__);
         }
-      
-        const value = providerSources.getterValues[prevRawSource.__key__];
 
-        for (let key in rawSources) {
-
-          if (key in value) {
-            continue;
-          }
-
-          const rawSource = rawSources[key];
-          Object.defineProperty(value, key, {
-            configurable: true,
-            set(value) {
-              const providerSources = sources[providerName];
-              
-              if (typeof providerSources === 'undefined') {
-                return;
-              }
-
-              const setter = providerSources.setters[rawSource.__key__];
-
-              if (typeof setter === 'undefined') {
-                return;
-              }
-
-              setter(value);
-            },
-            get() {
-              if (typeof sources[providerName] === 'undefined') {
-                return undefined;
-              }
-              return sources[providerName].getterValues[rawSource.__key__];
-            }
-          });
-        }
+        setSourceObjectProps(providerName, prevRawSource.__key__, prevRawSource);
       }
 
       prevRawSource = rawSources[keyPart];
