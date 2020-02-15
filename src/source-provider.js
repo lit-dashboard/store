@@ -3,7 +3,8 @@ import {
   sourcesChanged,
   getRawSource,
   getSource,
-  clearSources
+  clearSources, 
+  sourcesRemoved
 } from './store/sources';
 
 export default class SourceProvider {
@@ -23,6 +24,7 @@ export default class SourceProvider {
   constructor(providerName) {
     this._providerName = providerName;
     this._sourceUpdates = {};
+    this._sourceRemovals = [];
     this._interval = setInterval(this._sendUpdates.bind(this), 100);
   }
 
@@ -35,6 +37,13 @@ export default class SourceProvider {
     }
     else {
       this._sourceUpdates[key].last = value;
+    }
+  }
+
+  removeSource(key) {
+    console.log("KEY:", key, !this._sourceRemovals.includes(key));
+    if (!this._sourceRemovals.includes(key)) {
+      this._sourceRemovals.push(key);
     }
   }
 
@@ -86,7 +95,11 @@ export default class SourceProvider {
   }
 
   _sendUpdates() {
+    this._sendChanges();
+    this._sendRemovals();
+  }
 
+  _sendChanges() {
     if (Object.keys(this._sourceUpdates).length === 0) {
       return;
     }
@@ -109,5 +122,13 @@ export default class SourceProvider {
     }
   
     this._sourceUpdates = {};
+  }
+
+  _sendRemovals() {
+    if (this._sourceRemovals.length > 0) {
+      console.log("this._sourceRemovals:", this._sourceRemovals);
+      sourcesRemoved(this._providerName, this._sourceRemovals);
+      this._sourceRemovals = [];
+    }
   }
 }

@@ -81,4 +81,4 @@ export const hasSourceProvider = (providerName) => {
   return providerName in providers;
 };
 
-export { getSources, getSource, sourcesRemoved } from './sources';
+export { getSources, getSource } from './sources';
