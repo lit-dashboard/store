@@ -11,13 +11,15 @@
     "@babel/plugin-proposal-decorators": "^7.8.3",
     "@babel/preset-env": "^7.8.4",
     "@rollup/plugin-node-resolve": "^7.1.1",
+    "jsdoc": "^3.6.3",
     "rollup": "^1.31.0",
     "rollup-plugin-babel": "^4.3.3",
     "rollup-plugin-uglify-es": "0.0.1"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dist": "rollup -c"
+    "dist": "rollup -c",
+    "generate-docs": "jsdoc -c jsdoc.conf.json"
   },
   "repository": {
     "type": "git",
