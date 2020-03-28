@@ -4,6 +4,7 @@
 
 const providerTypes = {};
 const providers = {};
+const defaultSourceProvider = null;
 const sourceProviderListeners = [];
 
 /**
@@ -96,6 +97,14 @@ export const getSourceProviderNames = () => {
 
 export const hasSourceProvider = (providerName) => {
   return providerName in providers;
+};
+
+export const setDefaultSourceProvider = (providerName) => {
+  defaultSourceProvider = providerName;
+};
+
+export const getDefaultSourceProvider = () => {
+  return defaultSourceProvider;
 };
 
 export { getSources, getSource } from './sources';

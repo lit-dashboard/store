@@ -4,43 +4,6 @@
   (global = global || self, factory(global.WebbitStore = {}));
 }(this, (function (exports) { 'use strict';
 
-  class SourceProvider {
-    static get typeName() {
-      return null;
-    }
-
-    static get settingsDefaults() {
-      return {};
-    }
-
-    get settings() {
-      return {};
-    }
-
-    onSettingsChange(settings) {}
-
-    updateFromProvider() {}
-
-    updateFromDashboard() {}
-
-    getType(value) {
-      if (typeof value === 'string') {
-        return 'string';
-      } else if (typeof value === 'number') {
-        return 'number';
-      } else if (typeof value === 'boolean') {
-        return 'boolean';
-      } else if (value instanceof Array) {
-        return 'Array';
-      } else if (value === null) {
-        return 'null';
-      }
-
-      return null;
-    }
-
-  }
-
   /**
    * lodash (Custom Build) <https://lodash.com/>
    * Build: `lodash modularize exports="npm" -o ./`
@@ -838,40 +801,32 @@
     return target;
   }
 
-  var managers = {};
+  function _readOnlyError(name) {
+    throw new Error("\"" + name + "\" is read-only");
+  }
+
+  /**
+   @module @webbitjs/store
+  */
   var providerTypes = {};
   var providers = {};
+  var defaultSourceProvider = null;
   var sourceProviderListeners = [];
-  var hasSourceManager = providerName => {
-    return providerName in managers;
-  };
-  var getSourceManager = providerName => {
-    return managers[providerName];
-  };
-
-  var addSourceManager = (providerType, providerName) => {
-    providerName = providerName || providerType;
-
-    if (hasSourceManager(providerName) || !hasSourceProvider(providerName) || !hasSourceProviderType(providerType)) {
-      return;
-    }
-
-    managers[providerName] = new SourceManager(getSourceProvider(providerName), providerName);
-    initSources(providerName);
-  };
-
-  var removeSourceManager = providerName => {
-    if (!hasSourceManager(providerName)) {
-      return;
-    }
-
-    var manager = getSourceManager(providerName);
-
-    manager._disconnect();
-
-    removeSources(providerName);
-    delete managers[providerName];
-  };
+  /**
+   * Adds a provider type.
+   * 
+   * @function
+   * @example
+   * import { SourceProvider, addSourceProviderType } from "@webbitjs/store";
+   * 
+   * class MyProvider extends SourceProvider {
+   *   // class body
+   * }
+   * 
+   * addSourceProviderType(MyProvider);
+   * 
+   * @param {SourceProvider} constructor - The source provider class
+   */
 
   var addSourceProviderType = constructor => {
     var {
@@ -901,8 +856,7 @@
     }
 
     var SourceProvider = providerTypes[providerType];
-    providers[providerName] = new SourceProvider(_objectSpread2({}, SourceProvider.settingsDefaults, {}, settings));
-    addSourceManager(providerType, providerName);
+    providers[providerName] = new SourceProvider(providerName, _objectSpread2({}, SourceProvider.settingsDefaults, {}, settings));
     sourceProviderListeners.forEach(listener => {
       listener(providerName);
     });
@@ -916,12 +870,15 @@
     sourceProviderListeners.push(listener);
   };
   var removeSourceProvider = providerName => {
-    if (!hasSourceProvider(providerType)) {
+    if (!hasSourceProvider(providerName)) {
       return;
     }
 
+    var provider = providers[providerName];
+
+    provider._disconnect();
+
     delete providers[providerName];
-    removeSourceManager(providerName);
   };
   var getSourceProvider = providerName => {
     return providers[providerName];
@@ -935,12 +892,18 @@
   var hasSourceProvider = providerName => {
     return providerName in providers;
   };
-  var getState = () => {
-    return getAllSources();
+  var setDefaultSourceProvider = providerName => {
+    defaultSourceProvider = (_readOnlyError("defaultSourceProvider"), providerName);
   };
+  var getDefaultSourceProvider = () => {
+    return defaultSourceProvider;
+  };
+
+  class Source {}
 
   var rawSources = {};
   var sources = {};
+  var sourceObjectRefs = {};
   var subscribers = {};
   var nextSubscriberId = 0;
 
@@ -956,19 +919,74 @@
 
   var createSource = () => {
     return {
-      getters: {},
+      getterValues: {},
       setters: {},
       sources: {}
     };
   };
 
-  var noopSourceSetters = providerName => {
-    if (typeof sources[providerName] === 'undefined') {
-      return;
+  var getSourceObject = (providerName, key) => {
+    if (typeof sourceObjectRefs[providerName] === 'undefined') {
+      sourceObjectRefs[providerName] = {};
     }
 
-    for (var key in sources[providerName].setters) {
-      sources[providerName].setters[key] = () => {};
+    if (typeof sourceObjectRefs[providerName][key] === 'undefined') {
+      sourceObjectRefs[providerName][key] = new Source();
+    }
+
+    return sourceObjectRefs[providerName][key];
+  };
+
+  var setSourceObjectProps = (providerName, key, rawSource) => {
+    var value = getSourceObject(providerName, key);
+    Object.getOwnPropertyNames(value).forEach(prop => {
+      if (prop in rawSource.__sources__) {
+        return;
+      }
+
+      delete value[prop];
+    });
+
+    var _loop = function _loop(_key) {
+      if (_key in value) {
+        return "continue";
+      }
+
+      var rawSubSource = rawSource.__sources__[_key];
+      Object.defineProperty(value, _key, {
+        configurable: true,
+
+        set(value) {
+          var providerSources = sources[providerName];
+
+          if (typeof providerSources === 'undefined') {
+            return;
+          }
+
+          var setter = providerSources.setters[rawSubSource.__key__];
+
+          if (typeof setter === 'undefined') {
+            return;
+          }
+
+          setter(value);
+        },
+
+        get() {
+          if (typeof sources[providerName] === 'undefined') {
+            return undefined;
+          }
+
+          return sources[providerName].getterValues[rawSubSource.__key__];
+        }
+
+      });
+    };
+
+    for (var _key in rawSource.__sources__) {
+      var _ret = _loop(_key);
+
+      if (_ret === "continue") continue;
     }
   };
 
@@ -979,11 +997,95 @@
     }
   };
 
-  var getSources = providerName => {
+  var isSourceType = value => {
+    return value instanceof Object && value.constructor.name === 'Source';
+  };
+
+  var cleanSource = (providerName, rawSources, normalizedKeyParts) => {
+    if (normalizedKeyParts.length === 0) {
+      return false;
+    }
+
+    var keyPart = normalizedKeyParts[0];
+    var rawSource = rawSources[keyPart];
+
+    if (typeof rawSource === 'undefined') {
+      return false;
+    }
+
+    if (normalizedKeyParts.length > 1) {
+      cleanSource(providerName, rawSource.__sources__, normalizedKeyParts.slice(1));
+    }
+
+    if (Object.keys(rawSource.__sources__).length === 0 && !rawSource.__fromProvider__) {
+      delete rawSources[keyPart];
+    }
+
+    if (typeof rawSources[keyPart] === 'undefined') {
+      delete sources[providerName].sources[rawSource.__key__];
+      delete sources[providerName].getterValues[rawSource.__key__];
+      delete sources[providerName].setters[rawSource.__key__];
+      return true;
+    }
+
+    var providerSources = sources[providerName];
+    setSourceObjectProps(providerName, rawSource.__key__, rawSource);
+
+    if (Object.keys(rawSource.__sources__).length === 0) {
+      providerSources.getterValues[rawSource.__key__] = rawSource.__value__;
+    }
+
+    return true;
+  };
+
+  var getRawSources = providerName => {
     return rawSources[providerName];
   };
-  var getAllSources = () => {
-    return rawSources;
+  var getRawSource = (providerName, key) => {
+    var sourcesRoot = getRawSources(providerName);
+
+    if (typeof sourcesRoot === 'undefined') {
+      return null;
+    }
+
+    if (typeof key !== 'string') {
+      return sourcesRoot;
+    }
+
+    var keyParts = normalizeKey(key).split('/');
+    var sources = sourcesRoot.__sources__;
+
+    for (var index in keyParts) {
+      var keyPart = keyParts[index];
+
+      if (keyParts.length - 1 === parseInt(index)) {
+        return keyPart in sources ? sources[keyPart] : null;
+      }
+
+      if (keyPart in sources) {
+        sources = sources[keyPart].__sources__;
+      } else {
+        return null;
+      }
+    }
+
+    return null;
+  };
+  var getSources = providerName => {
+    if (providerName in sources) {
+      return sources[providerName].sources;
+    }
+
+    return undefined;
+  };
+  var getSource = (providerName, key) => {
+    var sources = getSources(providerName);
+
+    if (sources) {
+      return sources[key];
+    }
+
+    return undefined;
   };
   var subscribe = subscriber => {
     if (typeof subscriber !== 'function') {
@@ -1000,20 +1102,61 @@
 
     return unsubscribe;
   };
-  var initSources = providerName => {
-    if (providerName in rawSources) {
+  var clearSources = providerName => {
+    var hasSources = providerName in rawSources;
+
+    if (!hasSources) {
       return;
+    }
+
+    var _loop2 = function _loop2(key) {
+      var getterValue = sources[providerName].getterValues[key];
+
+      if (isSourceType(getterValue)) {
+        Object.getOwnPropertyNames(getterValue).forEach(prop => {
+          delete getterValue[prop];
+        });
+      }
+    };
+
+    for (var key in sources[providerName].getterValues) {
+      _loop2(key);
     }
 
     rawSources[providerName] = createRawSource();
     sources[providerName] = createSource();
     notifySubscribers();
   };
-  var removeSources = providerName => {
-    delete rawSources[providerName];
-    noopSourceSetters(providerName);
-    delete sources[providerName];
-    notifySubscribers();
+  var sourcesRemoved = (providerName, sourceRemovals) => {
+    if (typeof rawSources[providerName] === 'undefined') {
+      return;
+    }
+
+    var sourcesRoot = rawSources[providerName];
+
+    for (var key of sourceRemovals) {
+      var normalizedKey = normalizeKey(key);
+      var normalizedKeyParts = normalizedKey.split('/');
+      var _rawSources = sourcesRoot.__sources__;
+
+      for (var index in normalizedKeyParts) {
+        var keyPart = normalizedKeyParts[index];
+        var inSources = keyPart in _rawSources;
+
+        if (!inSources) {
+          break;
+        }
+
+        if (normalizedKeyParts.length - 1 === parseInt(index)) {
+          _rawSources[keyPart].__fromProvider__ = false;
+          _rawSources[keyPart].__value__ = undefined;
+        }
+
+        _rawSources = _rawSources[keyPart].__sources__;
+      }
+
+      cleanSource(providerName, sourcesRoot.__sources__, normalizedKeyParts);
+    }
   };
   var sourcesChanged = (providerName, sourceChanges) => {
     if (typeof rawSources[providerName] === 'undefined') {
@@ -1023,12 +1166,13 @@
 
     var sourcesRoot = rawSources[providerName];
 
-    var _loop = function _loop(key) {
+    var _loop4 = function _loop4(key) {
       var value = sourceChanges[key];
       var keyParts = key.split('/');
       var normalizedKey = normalizeKey(key);
       var normalizedKeyParts = normalizedKey.split('/');
       var rawSources = sourcesRoot.__sources__;
+      var prevRawSource = {};
       normalizedKeyParts.forEach((keyPart, index) => {
         var inSources = keyPart in rawSources;
         var sourceKey = keyParts.slice(0, index + 1).join('/');
@@ -1042,20 +1186,35 @@
             __value__: undefined,
             __sources__: {}
           };
-
-          providerSources.getters[sourceKey] = () => {
-            return {};
-          };
+          providerSources.getterValues[sourceKey] = getSourceObject(providerName, sourceKey);
 
           providerSources.setters[sourceKey] = () => {};
 
           Object.defineProperty(providerSources.sources, sourceKey, {
+            configurable: true,
+
             set(value) {
-              providerSources.setters[sourceKey](value);
+              var providerSources = sources[providerName];
+
+              if (typeof providerSources === 'undefined') {
+                return;
+              }
+
+              var setter = providerSources.setters[sourceKey];
+
+              if (typeof setter === 'undefined') {
+                return;
+              }
+
+              setter(value);
             },
 
             get() {
-              return providerSources.getters[sourceKey]();
+              if (typeof sources[providerName] === 'undefined') {
+                return undefined;
+              }
+
+              return sources[providerName].getterValues[sourceKey];
             }
 
           });
@@ -1066,51 +1225,116 @@
           rawSources[keyPart].__value__ = value;
 
           if (Object.keys(rawSources[keyPart].__sources__).length === 0) {
-            providerSources.getters[sourceKey] = () => {
-              return value;
-            };
-
-            var sourceProvider = getSourceProvider(providerName);
-
-            providerSources.setters[sourceKey] = value => {
-              sourceProvider.updateFromDashboard(sourceKey, value);
-            };
+            providerSources.getterValues[sourceKey] = value;
           }
-        } else {
-          rawSources = rawSources[keyPart].__sources__;
+
+          var sourceProvider = getSourceProvider(providerName);
+
+          providerSources.setters[sourceKey] = value => {
+            sourceProvider.updateFromUser(sourceKey, value);
+          };
         }
+
+        if (index !== 0) {
+          if (!isSourceType(providerSources.getterValues[prevRawSource.__key__])) {
+            providerSources.getterValues[prevRawSource.__key__] = getSourceObject(providerName, prevRawSource.__key__);
+          }
+
+          setSourceObjectProps(providerName, prevRawSource.__key__, prevRawSource);
+        }
+
+        prevRawSource = rawSources[keyPart];
+        rawSources = rawSources[keyPart].__sources__;
       });
     };
 
     for (var key in sourceChanges) {
-      _loop(key);
+      _loop4(key);
     }
 
     notifySubscribers();
   };
 
-  class SourceManager {
-    constructor(provider, providerName) {
-      this.providerName = providerName;
-      this.provider = provider;
-      this.sourceUpdates = {};
-      this.provider.updateFromProvider(this._updateSource.bind(this));
-      this.interval = setInterval(this._sendUpdates.bind(this), 100);
+  class SourceProvider {
+    static get typeName() {
+      return null;
     }
 
-    _disconnect() {
-      clearTimeout(this.interval);
+    static get settingsDefaults() {
+      return {};
     }
 
-    _updateSource(key, value) {
-      if (this.sourceUpdates[key] === undefined) {
-        this.sourceUpdates[key] = {
+    get settings() {
+      return {};
+    }
+    /**
+     * Parent class all source providers must inherit from. Each source provider
+     * instance is responsible for maintaining its own state object in the store. 
+     * 
+     * @memberof module:@webbitjs/store
+     * @abstract
+     * @param {string} providerName - The name of the provider.
+     */
+
+
+    constructor(providerName) {
+      if (new.target === SourceProvider) {
+        throw new TypeError("Cannot construct SourceProvider instances directly");
+      }
+
+      this._providerName = providerName;
+      this._sourceUpdates = {};
+      this._sourceRemovals = [];
+      this._interval = setInterval(this._sendUpdates.bind(this), 100);
+    }
+    /** 
+     * Updates the value of a source in the store. If the source doesn't
+     * exist then it is added. Should only be called internally by the 
+     * source provider.
+     * 
+     * @protected
+     * @param {string} key - The source's key. This is a string separated
+     * by '/'.
+     * @param {*} value - The new value.
+     */
+
+
+    updateSource(key, value) {
+      if (this._sourceUpdates[key] === undefined) {
+        this._sourceUpdates[key] = {
           first: value
         };
       } else {
-        this.sourceUpdates[key].last = value;
+        this._sourceUpdates[key].last = value;
       }
     }
+    /**
+     * Removes an existing source from the store. If the source
+     * doesn't exist this does nothing. Should only be called 
+     * internally by the source provider.
+     * 
+     * @protected
+     * @param {string} key - The source's key. This is a string separated
+     * by '/'.
+     */
+
+
+    removeSource(key) {
+      if (!this._sourceRemovals.includes(key)) {
+        this._sourceRemovals.push(key);
+      }
+    }
+    /**
+     * Subscribes to changes for a particular store.
+     * 
+     * @param {string} key - The source's key. This is a string separated
+     * by '/'.
+     * @param {function} callback - A function that takes in the source's
+     * value as a parameter.
+     * @param {boolean} callImmediately - If true, the callback is called
+     * immediately with the source's current value.
+     */
+
 
     subscribe(key, callback, callImmediately) {
       var unsubscribe = subscribe(() => {
@@ -1123,97 +1347,82 @@
 
       return unsubscribe;
     }
+    /**
+     * Gets a source's value.
+     * 
+     * @param {string} key - The source's key. This is a string separated
+     * by '/'.
+     */
+
 
     getSource(key) {
-      var _this = this;
-
-      var source = this.getRawSource(key);
-
-      if (!source) {
-        return undefined;
-      }
-
-      var rawValue = source.__value__;
-      var sources = source.__sources__;
-      var sourceProvider = this.provider;
-
-      if (Object.keys(sources).length > 0) {
-        var value = {};
-
-        var _loop = function _loop(propertyName) {
-          var source = sources[propertyName];
-
-          var sourceValue = _this.getSource(source.__key__);
-
-          Object.defineProperty(value, propertyName, {
-            get() {
-              return sourceValue;
-            },
-
-            set(value) {
-              var sourceKey = source.__key__;
-
-              if (typeof sourceKey === 'string' && sourceProvider) {
-                sourceProvider.updateFromDashboard(sourceKey, value);
-              }
-            }
-
-          });
-        };
-
-        for (var propertyName in sources) {
-          _loop(propertyName);
-        }
-
-        return value;
-      }
-
-      if (typeof rawValue === 'boolean') {
-        return rawValue;
-      } else if (typeof rawValue === 'number') {
-        return rawValue;
-      } else if (typeof rawValue === 'string') {
-        return rawValue;
-      } else if (rawValue instanceof Array) {
-        return [...rawValue];
-      }
-
-      return {};
+      return getSource(this._providerName, key);
     }
 
     getRawSource(key) {
-      var sourcesRoot = getSources(this.providerName);
+      return getRawSource(this._providerName, key);
+    }
+    /**
+     * Removes all sources in the store for this provider. Should only be
+     * called internally by the source provider.
+     * 
+     * @protected
+     */
 
-      if (typeof sourcesRoot === 'undefined') {
-        return null;
-      }
 
-      if (typeof key !== 'string') {
-        return sourcesRoot;
-      }
+    clearSources() {
+      clearSources(this._providerName);
+    }
+    /**
+     * Called when a source's value is modified by the user. This method
+     * should be overridden by the child class to handle these updates.
+     * This method should not be called directly.
+     * 
+     * @protected
+     * @param {string} key - The source's key. This is a string separated
+     * by '/'.
+     * @param {*} value - The source's updated value.
+     */
 
-      var keyParts = normalizeKey(key).split('/');
-      var sources = sourcesRoot.__sources__;
 
-      for (var index in keyParts) {
-        var keyPart = keyParts[index];
+    updateFromUser(key, value) {}
+    /**
+     * Helper function to get the type of a variable represented
+     * by a string.
+     * 
+     * @param {*} value
+     * @returns {string} - The value's type.
+     */
 
-        if (keyParts.length - 1 === parseInt(index)) {
-          return keyPart in sources ? sources[keyPart] : null;
-        }
 
-        if (keyPart in sources) {
-          sources = sources[keyPart].__sources__;
-        } else {
-          return null;
-        }
+    getType(value) {
+      if (typeof value === 'string') {
+        return 'string';
+      } else if (typeof value === 'number') {
+        return 'number';
+      } else if (typeof value === 'boolean') {
+        return 'boolean';
+      } else if (value instanceof Array) {
+        return 'Array';
+      } else if (value === null) {
+        return 'null';
       }
 
       return null;
     }
 
+    _disconnect() {
+      clearTimeout(this._interval);
+    }
+
     _sendUpdates() {
-      if (Object.keys(this.sourceUpdates).length === 0) {
+      this._sendChanges();
+
+      this._sendRemovals();
+    }
+
+    _sendChanges() {
+      if (Object.keys(this._sourceUpdates).length === 0) {
         return;
       } // send first updates then last
 
@@ -1221,41 +1430,47 @@
       var firstUpdates = {};
       var lastUpdates = {};
 
-      for (var key in this.sourceUpdates) {
-        var values = this.sourceUpdates[key];
+      for (var key in this._sourceUpdates) {
+        var values = this._sourceUpdates[key];
         firstUpdates[key] = values.first;
         if ('last' in values) lastUpdates[key] = values.last;
       }
 
-      sourcesChanged(this.providerName, firstUpdates);
+      sourcesChanged(this._providerName, firstUpdates);
 
       if (Object.keys(lastUpdates).length > 0) {
         setTimeout(() => {
-          sourcesChanged(this.providerName, lastUpdates);
+          sourcesChanged(this._providerName, lastUpdates);
         });
       }
 
-      this.sourceUpdates = {};
+      this._sourceUpdates = {};
+    }
+
+    _sendRemovals() {
+      if (this._sourceRemovals.length > 0) {
+        sourcesRemoved(this._providerName, this._sourceRemovals);
+        this._sourceRemovals = [];
+      }
     }
 
   }
 
   var SourceProvider$1 = SourceProvider;
-  var SourceManager$1 = SourceManager;
 
-  exports.SourceManager = SourceManager$1;
   exports.SourceProvider = SourceProvider$1;
   exports.addSourceProvider = addSourceProvider;
   exports.addSourceProviderType = addSourceProviderType;
-  exports.getSourceManager = getSourceManager;
+  exports.getDefaultSourceProvider = getDefaultSourceProvider;
+  exports.getSource = getSource;
   exports.getSourceProvider = getSourceProvider;
   exports.getSourceProviderNames = getSourceProviderNames;
   exports.getSourceProviderTypeNames = getSourceProviderTypeNames;
-  exports.getState = getState;
-  exports.hasSourceManager = hasSourceManager;
+  exports.getSources = getSources;
   exports.hasSourceProvider = hasSourceProvider;
   exports.hasSourceProviderType = hasSourceProviderType;
   exports.removeSourceProvider = removeSourceProvider;
+  exports.setDefaultSourceProvider = setDefaultSourceProvider;
   exports.sourceProviderAdded = sourceProviderAdded;
 
   Object.defineProperty(exports, '__esModule', { value: true });
