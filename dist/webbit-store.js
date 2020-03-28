@@ -801,10 +801,6 @@
     return target;
   }
 
-  function _readOnlyError(name) {
-    throw new Error("\"" + name + "\" is read-only");
-  }
-
   /**
    @module @webbitjs/store
   */
@@ -893,7 +889,7 @@
     return providerName in providers;
   };
   var setDefaultSourceProvider = providerName => {
-    defaultSourceProvider = (_readOnlyError("defaultSourceProvider"), providerName);
+    defaultSourceProvider = providerName;
   };
   var getDefaultSourceProvider = () => {
     return defaultSourceProvider;

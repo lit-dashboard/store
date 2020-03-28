@@ -4,7 +4,7 @@
 
 const providerTypes = {};
 const providers = {};
-const defaultSourceProvider = null;
+let defaultSourceProvider = null;
 const sourceProviderListeners = [];
 
 /**
