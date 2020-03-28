@@ -808,6 +808,7 @@
   var providers = {};
   var defaultSourceProvider = null;
   var sourceProviderListeners = [];
+  var defaultSourceProviderListeners = [];
   /**
    * Adds a provider type.
    * 
@@ -890,9 +891,19 @@
   };
   var setDefaultSourceProvider = providerName => {
     defaultSourceProvider = providerName;
+    defaultSourceProviderListeners.forEach(listener => {
+      listener(defaultSourceProvider);
+    });
   };
   var getDefaultSourceProvider = () => {
     return defaultSourceProvider;
+  };
+  var defaultSourceProviderSet = listener => {
+    if (typeof listener !== 'function') {
+      return;
+    }
+
+    defaultSourceProviderListeners.push(listener);
   };
 
   class Source {}
@@ -1457,6 +1468,7 @@
   exports.SourceProvider = SourceProvider$1;
   exports.addSourceProvider = addSourceProvider;
   exports.addSourceProviderType = addSourceProviderType;
+  exports.defaultSourceProviderSet = defaultSourceProviderSet;
   exports.getDefaultSourceProvider = getDefaultSourceProvider;
   exports.getSource = getSource;
   exports.getSourceProvider = getSourceProvider;

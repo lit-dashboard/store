@@ -6,6 +6,7 @@ const providerTypes = {};
 const providers = {};
 let defaultSourceProvider = null;
 const sourceProviderListeners = [];
+const defaultSourceProviderListeners = [];
 
 /**
  * Adds a provider type.
@@ -101,10 +102,22 @@ export const hasSourceProvider = (providerName) => {
 
 export const setDefaultSourceProvider = (providerName) => {
   defaultSourceProvider = providerName;
+
+  defaultSourceProviderListeners.forEach(listener => {
+    listener(defaultSourceProvider);
+  }); 
 };
 
 export const getDefaultSourceProvider = () => {
   return defaultSourceProvider;
+};
+
+export const defaultSourceProviderSet = (listener) => {
+  if (typeof listener !== 'function') {
+    return;
+  }
+
+  defaultSourceProviderListeners.push(listener);
 };
 
 export { getSources, getSource } from './sources';
