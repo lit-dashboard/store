@@ -134,7 +134,7 @@ class SourceProvider {
    * by '/'.
    * @param {*} value - The source's updated value.
    */
-  updateFromUser(key, value) {}
+  userUpdate(key, value) {}
 
   /**
    * Helper function to get the type of a variable represented

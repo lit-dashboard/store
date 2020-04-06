@@ -1392,7 +1392,7 @@
      */
 
 
-    updateFromUser(key, value) {}
+    userUpdate(key, value) {}
     /**
      * Helper function to get the type of a variable represented
      * by a string.
