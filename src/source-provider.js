@@ -84,20 +84,12 @@ class SourceProvider {
    * @param {string} key - The source's key. This is a string separated
    * by '/'.
    * @param {function} callback - A function that takes in the source's
-   * value as a parameter.
+   * value as a parameter. It's called when the source changes.
    * @param {boolean} callImmediately - If true, the callback is called
    * immediately with the source's current value.
    */
   subscribe(key, callback, callImmediately) {
-    const unsubscribe = subscribe(() => {
-      callback(this.getSource(key));
-    });
-
-    if (callImmediately) {
-      callback(this.getSource(key));
-    }
-
-    return unsubscribe;
+    return subscribe(this._providerName, key, callback, callImmediately);
   }
 
   /**

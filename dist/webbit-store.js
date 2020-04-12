@@ -912,6 +912,7 @@
   var sources = {};
   var sourceObjectRefs = {};
   var subscribers = {};
+  var subscribersAll = {};
   var nextSubscriberId = 0;
 
   var createRawSource = () => {
@@ -997,10 +998,48 @@
     }
   };
 
-  var notifySubscribers = () => {
-    for (var id in subscribers) {
-      var subscriber = subscribers[id];
-      subscriber();
+  var notifySubscribers = (providerName, key) => {
+    var keyParts = key.split('/');
+
+    if (providerName in subscribers) {
+      keyParts.forEach((keyPart, index) => {
+        var sourceKey = keyParts.slice(0, index + 1).join('/');
+
+        for (var id in subscribers[providerName][sourceKey] || {}) {
+          var subscriber = subscribers[providerName][sourceKey][id];
+          var source = getSource(providerName, sourceKey);
+          subscriber(source, sourceKey, key);
+        }
+      });
+    }
+
+    if (providerName in subscribersAll) {
+      for (var id in subscribersAll[providerName]) {
+        var subscriber = subscribersAll[providerName][id];
+        var source = getSource(providerName, key);
+        subscriber(source, key);
+      }
+    }
+  };
+
+  var notifySubscribersRemoved = (providerName, keys) => {
+    if (providerName in subscribers) {
+      for (var key in subscribers[providerName]) {
+        for (var id in subscribers[providerName][key]) {
+          var subscriber = subscribers[providerName][key][id];
+          subscriber(undefined, key, key);
+        }
+      }
+    }
+
+    if (providerName in subscribersAll) {
+      for (var _id in subscribersAll[providerName]) {
+        var _subscriber = subscribersAll[providerName][_id];
+
+        for (var _key2 of keys) {
+          _subscriber(undefined, _key2);
+        }
+      }
     }
   };
 
@@ -1094,17 +1133,33 @@
 
     return undefined;
   };
-  var subscribe = subscriber => {
-    if (typeof subscriber !== 'function') {
+  var subscribe = (providerName, key, callback, callImmediately) => {
+    if (typeof callback !== 'function') {
       throw new Error('Callback is not a function');
+    }
+
+    if (subscribers[providerName] === undefined) {
+      subscribers[providerName] = {};
+    }
+
+    if (subscribers[providerName][key] === undefined) {
+      subscribers[providerName][key] = {};
     }
 
     var id = nextSubscriberId;
     nextSubscriberId++;
-    subscribers[id] = subscriber;
+    subscribers[providerName][key][id] = callback;
+
+    if (callImmediately) {
+      var source = getSource(providerName, key);
+
+      if (source !== undefined) {
+        callback(source, key, key);
+      }
+    }
 
     var unsubscribe = () => {
-      delete subscribers[id];
+      delete subscribers[providerName][key][id];
     };
 
     return unsubscribe;
@@ -1115,6 +1170,8 @@
     if (!hasSources) {
       return;
     }
+
+    var sourceKeys = Object.getOwnPropertyNames(getSources(providerName));
 
     var _loop2 = function _loop2(key) {
       var getterValue = sources[providerName].getterValues[key];
@@ -1132,7 +1189,7 @@
 
     rawSources[providerName] = createRawSource();
     sources[providerName] = createSource();
-    notifySubscribers();
+    notifySubscribersRemoved(providerName, sourceKeys);
   };
   var sourcesRemoved = (providerName, sourceRemovals) => {
     if (typeof rawSources[providerName] === 'undefined') {
@@ -1253,13 +1310,12 @@
         prevRawSource = rawSources[keyPart];
         rawSources = rawSources[keyPart].__sources__;
       });
+      notifySubscribers(providerName, key);
     };
 
     for (var key in sourceChanges) {
       _loop4(key);
     }
-
-    notifySubscribers();
   };
 
   class SourceProvider {
@@ -1337,22 +1393,14 @@
      * @param {string} key - The source's key. This is a string separated
      * by '/'.
      * @param {function} callback - A function that takes in the source's
-     * value as a parameter.
+     * value as a parameter. It's called when the source changes.
      * @param {boolean} callImmediately - If true, the callback is called
      * immediately with the source's current value.
      */
 
 
     subscribe(key, callback, callImmediately) {
-      var unsubscribe = subscribe(() => {
-        callback(this.getSource(key));
-      });
-
-      if (callImmediately) {
-        callback(this.getSource(key));
-      }
-
-      return unsubscribe;
+      return subscribe(this._providerName, key, callback, callImmediately);
     }
     /**
      * Gets a source's value.

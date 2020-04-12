@@ -8,6 +8,7 @@ const sources = {};
 const sourceObjectRefs = {};
 
 const subscribers = {};
+const subscribersAll = {};
 let nextSubscriberId = 0;
 
 const createRawSource = () => {
@@ -84,10 +85,46 @@ const setSourceObjectProps = (providerName, key, rawSource) => {
   }
 };
 
-const notifySubscribers = () => {
-  for (let id in subscribers) {
-    const subscriber = subscribers[id];
-    subscriber();
+const notifySubscribers = (providerName, key) => {
+
+  const keyParts = key.split('/');
+  if (providerName in subscribers) {
+    keyParts.forEach((keyPart, index) => {
+      const sourceKey = keyParts.slice(0, index + 1).join('/');
+      for (let id in subscribers[providerName][sourceKey] || {}) {
+        const subscriber = subscribers[providerName][sourceKey][id];
+        const source = getSource(providerName, sourceKey);
+        subscriber(source, sourceKey, key);
+      }
+    });
+  }
+
+  if (providerName in subscribersAll) {
+    for (let id in subscribersAll[providerName]) {
+      const subscriber = subscribersAll[providerName][id];
+      const source = getSource(providerName, key);
+      subscriber(source, key);
+    }
+  }
+};
+
+const notifySubscribersRemoved = (providerName, keys) => {
+  if (providerName in subscribers) {
+    for (let key in subscribers[providerName]) {
+      for (let id in subscribers[providerName][key]) {
+        const subscriber = subscribers[providerName][key][id];
+        subscriber(undefined, key, key);
+      }
+    }
+  }
+
+  if (providerName in subscribersAll) {
+    for (let id in subscribersAll[providerName]) {
+      const subscriber = subscribersAll[providerName][id];
+      for (let key of keys) {
+        subscriber(undefined, key);
+      }
+    }
   }
 };
 
@@ -188,31 +225,63 @@ export const getSource = (providerName, key) => {
   return undefined;
 };
 
-export const subscribe = (subscriber) => {
-  if (typeof subscriber !== 'function') {
+export const subscribe = (providerName, key, callback, callImmediately) => {
+  if (typeof callback !== 'function') {
     throw new Error('Callback is not a function');
+  }
+
+  if (subscribers[providerName] === undefined) {
+    subscribers[providerName] = {};
+  }
+
+  if (subscribers[providerName][key] === undefined) {
+    subscribers[providerName][key] = {};
   }
 
   const id = nextSubscriberId;
   nextSubscriberId++;
-  subscribers[id] = subscriber;
+  subscribers[providerName][key][id] = callback;
+
+  if (callImmediately) {
+    const source = getSource(providerName, key);
+    if (source !== undefined) {
+      callback(source, key, key);
+    }
+  }
 
   const unsubscribe = () => {
-    delete subscribers[id];
+    delete subscribers[providerName][key][id];
   };
+
   return unsubscribe;
 };
 
-export const initSources = (providerName) => {
-
-  if (providerName in rawSources) {
-    return;
+export const subscribeAll = (providerName, callback, callImmediately) => {
+  if (typeof callback !== 'function') {
+    throw new Error('Callback is not a function');
   }
 
-  rawSources[providerName] = createRawSource();
-  sources[providerName] = createSource();
+  if (subscribersAll[providerName] === undefined) {
+    subscribersAll[providerName] = {};
+  }
 
-  notifySubscribers();
+  const id = nextSubscriberId;
+  nextSubscriberId++;
+  subscribersAll[providerName][id] = callback;
+
+  if (callImmediately) {
+    const sources = getSources(providerName);
+    for (let key in sources) {
+      const source = sources[key];
+      callback(source, key, key);
+    }
+  }
+
+  const unsubscribe = () => {
+    delete subscribersAll[providerName][id];
+  };
+
+  return unsubscribe;
 };
 
 export const clearSources = (providerName) => {
@@ -222,6 +291,8 @@ export const clearSources = (providerName) => {
   if (!hasSources) {
     return;
   }
+
+  const sourceKeys = Object.getOwnPropertyNames(getSources(providerName));
 
   for (let key in sources[providerName].getterValues) {
     const getterValue = sources[providerName].getterValues[key];
@@ -235,7 +306,7 @@ export const clearSources = (providerName) => {
   rawSources[providerName] = createRawSource();
   sources[providerName] = createSource();
 
-  notifySubscribers();
+  notifySubscribersRemoved(providerName, sourceKeys);
 };
 
 export const removeSources = (providerName) => {
@@ -245,6 +316,8 @@ export const removeSources = (providerName) => {
   if (!hasSources) {
     return;
   }
+
+  const sourceKeys = Object.getOwnPropertyNames(getSources(providerName));
 
   for (let key in sources[providerName].getterValues) {
     const getterValue = sources[providerName].getterValues[key];
@@ -257,7 +330,8 @@ export const removeSources = (providerName) => {
 
   delete rawSources[providerName];
   delete sources[providerName];
-  notifySubscribers();
+
+  notifySubscribersRemoved(providerName, sourceKeys);
 };
 
 export const sourcesRemoved = (providerName, sourceRemovals) => {
@@ -384,6 +458,7 @@ export const sourcesChanged = (providerName, sourceChanges) => {
       prevRawSource = rawSources[keyPart];
       rawSources = rawSources[keyPart].__sources__;
     });
+
+    notifySubscribers(providerName, key);
   }
-  notifySubscribers();
 };
