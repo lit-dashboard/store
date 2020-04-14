@@ -1164,6 +1164,34 @@
 
     return unsubscribe;
   };
+  var subscribeAll = (providerName, callback, callImmediately) => {
+    if (typeof callback !== 'function') {
+      throw new Error('Callback is not a function');
+    }
+
+    if (subscribersAll[providerName] === undefined) {
+      subscribersAll[providerName] = {};
+    }
+
+    var id = nextSubscriberId;
+    nextSubscriberId++;
+    subscribersAll[providerName][id] = callback;
+
+    if (callImmediately) {
+      var _sources = getSources(providerName);
+
+      Object.getOwnPropertyNames(_sources).forEach(key => {
+        var source = _sources[key];
+        callback(source, key);
+      });
+    }
+
+    var unsubscribe = () => {
+      delete subscribersAll[providerName][id];
+    };
+
+    return unsubscribe;
+  };
   var clearSources = providerName => {
     var hasSources = providerName in rawSources;
 
@@ -1388,12 +1416,13 @@
       }
     }
     /**
-     * Subscribes to changes for a particular store.
+     * Subscribes to changes for a particular source and all that source's
+     * children.
      * 
      * @param {string} key - The source's key. This is a string separated
      * by '/'.
      * @param {function} callback - A function that takes in the source's
-     * value as a parameter. It's called when the source changes.
+     * value, key, and key of child source that changed.
      * @param {boolean} callImmediately - If true, the callback is called
      * immediately with the source's current value.
      */
@@ -1401,6 +1430,19 @@
 
     subscribe(key, callback, callImmediately) {
       return subscribe(this._providerName, key, callback, callImmediately);
+    }
+    /**
+     * Subscribes to all source changes.
+     * 
+     * @param {function} callback - A function that takes in the source's
+     * value, key, and key of child source that changed.
+     * @param {boolean} callImmediately - If true, the callback is called
+     * immediately with the source's current value.
+     */
+
+
+    subscribeAll(callback, callImmediately) {
+      return subscribeAll(this._providerName, callback, callImmediately);
     }
     /**
      * Gets a source's value.
@@ -1416,6 +1458,14 @@
 
     getRawSource(key) {
       return getRawSource(this._providerName, key);
+    }
+    /**
+     * Gets all sources
+     */
+
+
+    getSources() {
+      return getSources(this._providerName);
     }
     /**
      * Removes all sources in the store for this provider. Should only be
