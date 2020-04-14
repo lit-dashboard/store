@@ -1,8 +1,10 @@
 import { 
   subscribe,
+  subscribeAll,
   sourcesChanged,
   getRawSource,
   getSource,
+  getSources,
   clearSources, 
   sourcesRemoved
 } from './store/sources';
@@ -79,17 +81,30 @@ class SourceProvider {
   }
 
   /**
-   * Subscribes to changes for a particular store.
+   * Subscribes to changes for a particular source and all that source's
+   * children.
    * 
    * @param {string} key - The source's key. This is a string separated
    * by '/'.
    * @param {function} callback - A function that takes in the source's
-   * value as a parameter. It's called when the source changes.
+   * value, key, and key of child source that changed.
    * @param {boolean} callImmediately - If true, the callback is called
    * immediately with the source's current value.
    */
   subscribe(key, callback, callImmediately) {
     return subscribe(this._providerName, key, callback, callImmediately);
+  }
+
+  /**
+   * Subscribes to all source changes.
+   * 
+   * @param {function} callback - A function that takes in the source's
+   * value, key, and key of child source that changed.
+   * @param {boolean} callImmediately - If true, the callback is called
+   * immediately with the source's current value.
+   */
+  subscribeAll(callback, callImmediately) {
+    return subscribeAll(this._providerName, callback, callImmediately);
   }
 
   /**
@@ -104,6 +119,13 @@ class SourceProvider {
 
   getRawSource(key) {
     return getRawSource(this._providerName, key);
+  }
+
+  /**
+   * Gets all sources
+   */
+  getSources() {
+    return getSources(this._providerName);
   }
 
   /**

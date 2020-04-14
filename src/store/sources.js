@@ -271,10 +271,10 @@ export const subscribeAll = (providerName, callback, callImmediately) => {
 
   if (callImmediately) {
     const sources = getSources(providerName);
-    for (let key in sources) {
+    Object.getOwnPropertyNames(sources).forEach(key => {
       const source = sources[key];
-      callback(source, key, key);
-    }
+      callback(source, key);
+    });
   }
 
   const unsubscribe = () => {
