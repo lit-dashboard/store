@@ -1180,7 +1180,7 @@
     if (callImmediately) {
       var _sources = getSources(providerName);
 
-      Object.getOwnPropertyNames(_sources).forEach(key => {
+      Object.getOwnPropertyNames(_sources || {}).forEach(key => {
         var source = _sources[key];
         callback(source, key);
       });
@@ -1199,7 +1199,7 @@
       return;
     }
 
-    var sourceKeys = Object.getOwnPropertyNames(getSources(providerName));
+    var sourceKeys = Object.getOwnPropertyNames(getSources(providerName) || {});
 
     var _loop2 = function _loop2(key) {
       var getterValue = sources[providerName].getterValues[key];

@@ -271,7 +271,7 @@ export const subscribeAll = (providerName, callback, callImmediately) => {
 
   if (callImmediately) {
     const sources = getSources(providerName);
-    Object.getOwnPropertyNames(sources).forEach(key => {
+    Object.getOwnPropertyNames(sources || {}).forEach(key => {
       const source = sources[key];
       callback(source, key);
     });
@@ -292,7 +292,7 @@ export const clearSources = (providerName) => {
     return;
   }
 
-  const sourceKeys = Object.getOwnPropertyNames(getSources(providerName));
+  const sourceKeys = Object.getOwnPropertyNames(getSources(providerName) || {});
 
   for (let key in sources[providerName].getterValues) {
     const getterValue = sources[providerName].getterValues[key];
