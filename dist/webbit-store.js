@@ -1,7 +1,7 @@
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
   typeof define === 'function' && define.amd ? define(['exports'], factory) :
-  (global = global || self, factory(global.WebbitStore = {}));
+  (global = global || self, factory(global.webbitStore = {}));
 }(this, (function (exports) { 'use strict';
 
   /**
@@ -956,12 +956,14 @@
     });
 
     var _loop = function _loop(_key) {
-      if (_key in value) {
+      var normalizedKey = normalizeKey(_key);
+
+      if (normalizedKey in value) {
         return "continue";
       }
 
       var rawSubSource = rawSource.__sources__[_key];
-      Object.defineProperty(value, _key, {
+      Object.defineProperty(value, normalizedKey, {
         configurable: true,
 
         set(value) {
@@ -971,7 +973,7 @@
             return;
           }
 
-          var setter = providerSources.setters[rawSubSource.__key__];
+          var setter = providerSources.setters[rawSubSource.__normalizedKey__];
 
           if (typeof setter === 'undefined') {
             return;
@@ -985,7 +987,7 @@
             return undefined;
           }
 
-          return sources[providerName].getterValues[rawSubSource.__key__];
+          return sources[providerName].getterValues[rawSubSource.__normalizedKey__];
         }
 
       });
@@ -999,7 +1001,7 @@
   };
 
   var notifySubscribers = (providerName, key) => {
-    var keyParts = key.split('/');
+    var keyParts = normalizeKey(key).split('/');
 
     if (providerName in subscribers) {
       keyParts.forEach((keyPart, index) => {
@@ -1128,7 +1130,7 @@
     var sources = getSources(providerName);
 
     if (sources) {
-      return sources[key];
+      return sources[normalizeKey(key)];
     }
 
     return undefined;
@@ -1137,6 +1139,8 @@
     if (typeof callback !== 'function') {
       throw new Error('Callback is not a function');
     }
+
+    key = normalizeKey(key);
 
     if (subscribers[providerName] === undefined) {
       subscribers[providerName] = {};
@@ -1269,20 +1273,21 @@
         var inSources = keyPart in rawSources;
         var sourceKey = keyParts.slice(0, index + 1).join('/');
         var providerSources = sources[providerName];
+        var normalizedKeyPartsJoined = normalizedKeyParts.slice(0, index + 1).join('/');
 
         if (!inSources) {
           rawSources[keyPart] = {
             __fromProvider__: false,
-            __normalizedKey__: normalizedKeyParts.slice(0, index + 1).join('/'),
+            __normalizedKey__: normalizedKeyPartsJoined,
             __key__: sourceKey,
             __value__: undefined,
             __sources__: {}
           };
-          providerSources.getterValues[sourceKey] = getSourceObject(providerName, sourceKey);
+          providerSources.getterValues[normalizedKeyPartsJoined] = getSourceObject(providerName, sourceKey);
 
-          providerSources.setters[sourceKey] = () => {};
+          providerSources.setters[normalizedKeyPartsJoined] = () => {};
 
-          Object.defineProperty(providerSources.sources, sourceKey, {
+          Object.defineProperty(providerSources.sources, normalizedKeyPartsJoined, {
             configurable: true,
 
             set(value) {
@@ -1292,7 +1297,7 @@
                 return;
               }
 
-              var setter = providerSources.setters[sourceKey];
+              var setter = providerSources.setters[normalizedKeyPartsJoined];
 
               if (typeof setter === 'undefined') {
                 return;
@@ -1306,7 +1311,7 @@
                 return undefined;
               }
 
-              return sources[providerName].getterValues[sourceKey];
+              return sources[providerName].getterValues[normalizedKeyPartsJoined];
             }
 
           });
@@ -1317,28 +1322,28 @@
           rawSources[keyPart].__value__ = value;
 
           if (Object.keys(rawSources[keyPart].__sources__).length === 0) {
-            providerSources.getterValues[sourceKey] = value;
+            providerSources.getterValues[normalizedKeyPartsJoined] = value;
           }
 
           var sourceProvider = getSourceProvider(providerName);
 
-          providerSources.setters[sourceKey] = value => {
-            sourceProvider.updateFromUser(sourceKey, value);
+          providerSources.setters[normalizedKeyPartsJoined] = value => {
+            sourceProvider.userUpdate(sourceKey, value);
           };
         }
 
         if (index !== 0) {
-          if (!isSourceType(providerSources.getterValues[prevRawSource.__key__])) {
-            providerSources.getterValues[prevRawSource.__key__] = getSourceObject(providerName, prevRawSource.__key__);
+          if (!isSourceType(providerSources.getterValues[prevRawSource.__normalizedKey__])) {
+            providerSources.getterValues[prevRawSource.__normalizedKey__] = getSourceObject(providerName, prevRawSource.__normalizedKey__);
           }
 
-          setSourceObjectProps(providerName, prevRawSource.__key__, prevRawSource);
+          setSourceObjectProps(providerName, prevRawSource.__normalizedKey__, prevRawSource);
         }
 
         prevRawSource = rawSources[keyPart];
         rawSources = rawSources[keyPart].__sources__;
       });
-      notifySubscribers(providerName, key);
+      notifySubscribers(providerName, normalizedKey);
     };
 
     for (var key in sourceChanges) {
@@ -1371,6 +1376,10 @@
     constructor(providerName) {
       if (new.target === SourceProvider) {
         throw new TypeError("Cannot construct SourceProvider instances directly");
+      }
+
+      if (typeof providerName !== 'string') {
+        throw new TypeError("The providerName needs to be passed into super() from your provider's constructor.");
       }
 
       this._providerName = providerName;

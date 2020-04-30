@@ -53,12 +53,14 @@ const setSourceObjectProps = (providerName, key, rawSource) => {
 
   for (let key in rawSource.__sources__) {
 
-    if (key in value) {
+    const normalizedKey = normalizeKey(key);
+
+    if (normalizedKey in value) {
       continue;
     }
 
     const rawSubSource = rawSource.__sources__[key];
-    Object.defineProperty(value, key, {
+    Object.defineProperty(value, normalizedKey, {
       configurable: true,
       set(value) {
         const providerSources = sources[providerName];
@@ -67,7 +69,7 @@ const setSourceObjectProps = (providerName, key, rawSource) => {
           return;
         }
 
-        const setter = providerSources.setters[rawSubSource.__key__];
+        const setter = providerSources.setters[rawSubSource.__normalizedKey__];
 
         if (typeof setter === 'undefined') {
           return;
@@ -79,15 +81,14 @@ const setSourceObjectProps = (providerName, key, rawSource) => {
         if (typeof sources[providerName] === 'undefined') {
           return undefined;
         }
-        return sources[providerName].getterValues[rawSubSource.__key__];
+        return sources[providerName].getterValues[rawSubSource.__normalizedKey__];
       }
     });
   }
 };
 
 const notifySubscribers = (providerName, key) => {
-
-  const keyParts = key.split('/');
+  const keyParts = normalizeKey(key).split('/');
   if (providerName in subscribers) {
     keyParts.forEach((keyPart, index) => {
       const sourceKey = keyParts.slice(0, index + 1).join('/');
@@ -220,7 +221,7 @@ export const getSources = (providerName) => {
 export const getSource = (providerName, key) => {
   const sources = getSources(providerName);
   if (sources) {
-    return sources[key];
+    return sources[normalizeKey(key)];
   }
   return undefined;
 };
@@ -229,6 +230,8 @@ export const subscribe = (providerName, key, callback, callImmediately) => {
   if (typeof callback !== 'function') {
     throw new Error('Callback is not a function');
   }
+
+  key = normalizeKey(key);
 
   if (subscribers[providerName] === undefined) {
     subscribers[providerName] = {};
@@ -392,19 +395,20 @@ export const sourcesChanged = (providerName, sourceChanges) => {
       const inSources = keyPart in rawSources;
       const sourceKey = keyParts.slice(0, index + 1).join('/');
       const providerSources = sources[providerName];
+      const normalizedKeyPartsJoined = normalizedKeyParts.slice(0, index + 1).join('/');
 
       if (!inSources) {
         rawSources[keyPart] = {
           __fromProvider__: false,
-          __normalizedKey__: normalizedKeyParts.slice(0, index + 1).join('/'),
+          __normalizedKey__: normalizedKeyPartsJoined,
           __key__: sourceKey,
           __value__: undefined,
           __sources__: {}
         }
 
-        providerSources.getterValues[sourceKey] = getSourceObject(providerName, sourceKey);
-        providerSources.setters[sourceKey] = () => {};
-        Object.defineProperty(providerSources.sources, sourceKey, {
+        providerSources.getterValues[normalizedKeyPartsJoined] = getSourceObject(providerName, sourceKey);
+        providerSources.setters[normalizedKeyPartsJoined] = () => {};
+        Object.defineProperty(providerSources.sources, normalizedKeyPartsJoined, {
           configurable: true,
           set(value) {     
             const providerSources = sources[providerName];
@@ -413,7 +417,7 @@ export const sourcesChanged = (providerName, sourceChanges) => {
               return;
             }
 
-            const setter = providerSources.setters[sourceKey];
+            const setter = providerSources.setters[normalizedKeyPartsJoined];
 
             if (typeof setter === 'undefined') {
               return;
@@ -425,7 +429,7 @@ export const sourcesChanged = (providerName, sourceChanges) => {
             if (typeof sources[providerName] === 'undefined') {
               return undefined;
             }
-            return sources[providerName].getterValues[sourceKey];
+            return sources[providerName].getterValues[normalizedKeyPartsJoined];
           }
         });
       }
@@ -436,29 +440,29 @@ export const sourcesChanged = (providerName, sourceChanges) => {
         rawSources[keyPart].__value__ = value;
 
         if (Object.keys(rawSources[keyPart].__sources__).length === 0) {
-          providerSources.getterValues[sourceKey] = value;
+          providerSources.getterValues[normalizedKeyPartsJoined] = value;
         }
 
         const sourceProvider = getSourceProvider(providerName);
-        providerSources.setters[sourceKey] = (value) => {
-          sourceProvider.updateFromUser(sourceKey, value);
+        providerSources.setters[normalizedKeyPartsJoined] = (value) => {
+          sourceProvider.userUpdate(sourceKey, value);
         };
 
       }
 
       if (index !== 0) {
 
-        if (!isSourceType(providerSources.getterValues[prevRawSource.__key__])) {
-          providerSources.getterValues[prevRawSource.__key__] = getSourceObject(providerName, prevRawSource.__key__);
+        if (!isSourceType(providerSources.getterValues[prevRawSource.__normalizedKey__])) {
+          providerSources.getterValues[prevRawSource.__normalizedKey__] = getSourceObject(providerName, prevRawSource.__normalizedKey__);
         }
 
-        setSourceObjectProps(providerName, prevRawSource.__key__, prevRawSource);
+        setSourceObjectProps(providerName, prevRawSource.__normalizedKey__, prevRawSource);
       }
 
       prevRawSource = rawSources[keyPart];
       rawSources = rawSources[keyPart].__sources__;
     });
 
-    notifySubscribers(providerName, key);
+    notifySubscribers(providerName, normalizedKey);
   }
 };

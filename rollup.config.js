@@ -8,7 +8,7 @@ export default [
     output: {
       file: './dist/webbit-store.js',
       format: 'umd',
-      name: 'WebbitStore'
+      name: 'webbitStore'
     },
     plugins: [
       resolve(),
@@ -20,7 +20,7 @@ export default [
     output: {
       file: './dist/webbit-store.min.js',
       format: 'umd',
-      name: 'WebbitStore'
+      name: 'webbitStore'
     },
     plugins: [
       resolve(),

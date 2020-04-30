@@ -37,6 +37,10 @@ class SourceProvider {
       throw new TypeError("Cannot construct SourceProvider instances directly");
     }
 
+    if (typeof providerName !== 'string') {
+      throw new TypeError("The providerName needs to be passed into super() from your provider's constructor.");
+    }
+
     this._providerName = providerName;
     this._sourceUpdates = {};
     this._sourceRemovals = [];
