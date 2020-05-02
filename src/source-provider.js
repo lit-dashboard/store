@@ -43,7 +43,6 @@ class SourceProvider {
 
     this._providerName = providerName;
     this._sourceUpdates = {};
-    this._sourceRemovals = [];
     this._interval = setInterval(this._sendUpdates.bind(this), 100);
   }
 
@@ -61,11 +60,17 @@ class SourceProvider {
   updateSource(key, value) {
     if (this._sourceUpdates[key] === undefined) {
       this._sourceUpdates[key] = {
-        first: value
+        first: {
+          type: 'change',
+          value
+        }
       };
     }
     else {
-      this._sourceUpdates[key].last = value;
+      this._sourceUpdates[key].last = {
+        type: 'change',
+        value
+      };
     }
   }
 
@@ -79,8 +84,17 @@ class SourceProvider {
    * by '/'.
    */
   removeSource(key) {
-    if (!this._sourceRemovals.includes(key)) {
-      this._sourceRemovals.push(key);
+    if (this._sourceUpdates[key] === undefined) {
+      this._sourceUpdates[key] = {
+        first: {
+          type: 'removal',
+        }
+      };
+    }
+    else {
+      this._sourceUpdates[key].last = {
+        type: 'removal',
+      };
     }
   }
 
@@ -136,10 +150,19 @@ class SourceProvider {
    * Removes all sources in the store for this provider. Should only be
    * called internally by the source provider.
    * 
-   * @protected
+   * @protected 
+   * @param {function} callback - An optional callback. Called when sources
+   * have been cleared.
    */
-  clearSources() {
-    clearSources(this._providerName);
+  clearSources(callback) {
+    // send updates now to prevent them from being incorrectly sent after
+    // sources were cleared.
+    this._sendUpdates(() => {
+      clearSources(this._providerName);
+      if (typeof callback === 'function') {
+        callback();
+      }
+    });
   }
 
   /**
@@ -180,13 +203,11 @@ class SourceProvider {
     clearTimeout(this._interval);
   }
 
-  _sendUpdates() {
-    this._sendChanges();
-    this._sendRemovals();
-  }
-
-  _sendChanges() {
+  _sendUpdates(callback) {
     if (Object.keys(this._sourceUpdates).length === 0) {
+      if (typeof callback === 'function') {
+        callback();
+      }
       return;
     }
     // send first updates then last
@@ -200,20 +221,49 @@ class SourceProvider {
         lastUpdates[key] = values.last;
     }
 
-    sourcesChanged(this._providerName, firstUpdates);
+    this._sendChanges(firstUpdates);
+    this._sendRemovals(firstUpdates);
+
+
     if (Object.keys(lastUpdates).length > 0) {
       setTimeout(() => {
-        sourcesChanged(this._providerName, lastUpdates);
+        this._sendChanges(lastUpdates);
+        this._sendRemovals(lastUpdates);
+        this._sourceUpdates = {};
+        if (typeof callback === 'function') {
+          callback();
+        }
       });
+    } else {
+      this._sourceUpdates = {};
+      if (typeof callback === 'function') {
+        callback();
+      }
     }
-  
-    this._sourceUpdates = {};
   }
 
-  _sendRemovals() {
-    if (this._sourceRemovals.length > 0) {
-      sourcesRemoved(this._providerName, this._sourceRemovals);
-      this._sourceRemovals = [];
+  _sendChanges(updates) {
+    const changes = {};
+    for (let key in updates) {
+      if (updates[key].type === 'change') {
+        changes[key] = updates[key].value;
+      }
+    }
+    if (Object.keys(changes).length > 0) {
+      sourcesChanged(this._providerName, changes);
+    }
+  }
+
+  _sendRemovals(updates) {
+    const removals = [];
+    for (let key in updates) {
+      if (updates[key].type === 'removal') {
+        removals.push(key);
+      }
+    }
+
+    if (removals.length > 0) {
+      sourcesRemoved(this._providerName, removals);
     }
   }
 }
