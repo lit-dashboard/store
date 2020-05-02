@@ -3,11 +3,11 @@ import * as mockSources from './store/sources';
 
 
 jest.mock('./store/sources', () => ({
-  subscribe: jest.fn(),
-  subscribeAll: jest.fn(),
-  getRawSource: jest.fn(),
-  getSource: jest.fn(),
-  getSources: jest.fn(),
+  subscribe: jest.fn().mockReturnValue(() => {}),
+  subscribeAll: jest.fn().mockReturnValue(() => {}),
+  getRawSource: jest.fn().mockReturnValue({}),
+  getSource: jest.fn().mockReturnValue({}),
+  getSources: jest.fn().mockReturnValue({}),
   clearSources: jest.fn(),
   sourcesChanged: jest.fn(),
   sourcesRemoved: jest.fn()
@@ -247,6 +247,61 @@ describe('source-provider.js', () => {
         triggerUpdate();
         expect(mockSources.sourcesChanged).toHaveBeenCalledTimes(4);
       });
+      jest.advanceTimersByTime(0);
+    });
+
+    it('subscribes to a particular source when subscribe is called', () => {
+      const mockCallback = jest.fn();
+      const cancel = testProvider.subscribe('/a', mockCallback, true);
+      expect(cancel).toEqual(expect.any(Function));
+      expect(mockSources.subscribe).toHaveBeenCalledTimes(1);
+      expect(mockSources.subscribe).toHaveBeenNthCalledWith(1, 'TestProvider', '/a', mockCallback, true);
+    });
+
+    it('subscribes to all sources when subscribeAll is called', () => {
+      const mockCallback = jest.fn();
+      const cancel = testProvider.subscribeAll( mockCallback, true);
+      expect(cancel).toEqual(expect.any(Function));
+      expect(mockSources.subscribeAll).toHaveBeenCalledTimes(1);
+      expect(mockSources.subscribeAll).toHaveBeenNthCalledWith(1, 'TestProvider', mockCallback, true);
+    });
+
+    it('gets a source when getSource is called', () => {
+      const source = testProvider.getSource('/a');
+      expect(source).toEqual({});
+      expect(mockSources.getSource).toHaveBeenCalledTimes(1);
+      expect(mockSources.getSource).toHaveBeenNthCalledWith(1, 'TestProvider', '/a');
+    });
+
+    it('gets a raw source when getRawSource is called', () => {
+      const rawSource = testProvider.getRawSource('/a');
+      expect(rawSource).toEqual({});
+      expect(mockSources.getRawSource).toHaveBeenCalledTimes(1);
+      expect(mockSources.getRawSource).toHaveBeenNthCalledWith(1, 'TestProvider', '/a');
+    });
+
+    it('gets all sources when getSources is called', () => {
+      const allSources = testProvider.getSources();
+      expect(allSources).toEqual({});
+      expect(mockSources.getSources).toHaveBeenCalledTimes(1);
+      expect(mockSources.getSources).toHaveBeenNthCalledWith(1, 'TestProvider');
+    });
+
+    it('gets the name of a type when getType is called', () => {
+      expect(testProvider.getType('hello')).toBe('string');
+      expect(testProvider.getType(10)).toBe('number');
+      expect(testProvider.getType(false)).toBe('boolean');
+      expect(testProvider.getType([1,2,3])).toBe('Array');
+      expect(testProvider.getType(null)).toBe('null');
+      expect(testProvider.getType(undefined)).toBe(null);
+    });
+    
+    it('no longer sends updates when _disconnect is called', () => {
+      testProvider._disconnect();
+      testProvider.updateSource('/a', 3);
+      testProvider.updateSource('/b', true);
+      triggerUpdate();
+      expect(mockSources.sourcesChanged).toHaveBeenCalledTimes(0);
     });
   });
 });
