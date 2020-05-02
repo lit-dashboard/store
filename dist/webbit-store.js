@@ -4,6 +4,55 @@
   (global = global || self, factory(global.webbitStore = {}));
 }(this, (function (exports) { 'use strict';
 
+  function _defineProperty(obj, key, value) {
+    if (key in obj) {
+      Object.defineProperty(obj, key, {
+        value: value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    } else {
+      obj[key] = value;
+    }
+
+    return obj;
+  }
+
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+      if (enumerableOnly) symbols = symbols.filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+      });
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i] != null ? arguments[i] : {};
+
+      if (i % 2) {
+        ownKeys(Object(source), true).forEach(function (key) {
+          _defineProperty(target, key, source[key]);
+        });
+      } else if (Object.getOwnPropertyDescriptors) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+      } else {
+        ownKeys(Object(source)).forEach(function (key) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        });
+      }
+    }
+
+    return target;
+  }
+
   /**
    * lodash (Custom Build) <https://lodash.com/>
    * Build: `lodash modularize exports="npm" -o ./`
@@ -752,55 +801,6 @@
     return key.split('/').map(keyPart => camelCase(keyPart)).join('/');
   };
 
-  function _defineProperty(obj, key, value) {
-    if (key in obj) {
-      Object.defineProperty(obj, key, {
-        value: value,
-        enumerable: true,
-        configurable: true,
-        writable: true
-      });
-    } else {
-      obj[key] = value;
-    }
-
-    return obj;
-  }
-
-  function ownKeys(object, enumerableOnly) {
-    var keys = Object.keys(object);
-
-    if (Object.getOwnPropertySymbols) {
-      var symbols = Object.getOwnPropertySymbols(object);
-      if (enumerableOnly) symbols = symbols.filter(function (sym) {
-        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
-      });
-      keys.push.apply(keys, symbols);
-    }
-
-    return keys;
-  }
-
-  function _objectSpread2(target) {
-    for (var i = 1; i < arguments.length; i++) {
-      var source = arguments[i] != null ? arguments[i] : {};
-
-      if (i % 2) {
-        ownKeys(Object(source), true).forEach(function (key) {
-          _defineProperty(target, key, source[key]);
-        });
-      } else if (Object.getOwnPropertyDescriptors) {
-        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
-      } else {
-        ownKeys(Object(source)).forEach(function (key) {
-          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
-        });
-      }
-    }
-
-    return target;
-  }
-
   /**
    @module @webbitjs/store
   */
@@ -830,8 +830,12 @@
       typeName
     } = constructor;
 
+    if (typeof typeName !== 'string') {
+      throw new Error('A typeName for your source provider type must be set.');
+    }
+
     if (hasSourceProviderType(typeName)) {
-      return;
+      throw new Error('A source provider type with the same name has already been added.');
     }
 
     if (Object.getPrototypeOf(constructor).name === 'SourceProvider') {
@@ -848,8 +852,12 @@
       providerName = providerType;
     }
 
-    if (!hasSourceProviderType(providerType) || hasSourceProvider(providerName)) {
-      return null;
+    if (!hasSourceProviderType(providerType)) {
+      throw new Error("A source provider type with that name hasn't been added.");
+    }
+
+    if (hasSourceProvider(providerName)) {
+      throw new Error('A source provider with that name has already been added.');
     }
 
     var SourceProvider = providerTypes[providerType];
@@ -861,7 +869,7 @@
   };
   var sourceProviderAdded = listener => {
     if (typeof listener !== 'function') {
-      return;
+      throw new Error('listener is not a function');
     }
 
     sourceProviderListeners.push(listener);
@@ -900,7 +908,7 @@
   };
   var defaultSourceProviderSet = listener => {
     if (typeof listener !== 'function') {
-      return;
+      throw new Error('listener is not a function');
     }
 
     defaultSourceProviderListeners.push(listener);
@@ -1359,10 +1367,6 @@
     static get settingsDefaults() {
       return {};
     }
-
-    get settings() {
-      return {};
-    }
     /**
      * Parent class all source providers must inherit from. Each source provider
      * instance is responsible for maintaining its own state object in the store. 
@@ -1373,16 +1377,25 @@
      */
 
 
-    constructor(providerName) {
+    constructor(providerName, settings) {
       if (new.target === SourceProvider) {
-        throw new TypeError("Cannot construct SourceProvider instances directly");
+        throw new TypeError("Cannot construct SourceProvider instances directly.");
       }
 
       if (typeof providerName !== 'string') {
         throw new TypeError("The providerName needs to be passed into super() from your provider's constructor.");
       }
 
+      if (typeof settings === 'undefined') {
+        throw new Error("settings must be passed into the super() from your provider's constructor.");
+      }
+
+      if (typeof this.constructor.typeName !== 'string') {
+        throw new Error("A typeName string must be defined.");
+      }
+
       this._providerName = providerName;
+      this.settings = _objectSpread2({}, this.constructor.settingsDefaults, {}, settings);
       this._sourceUpdates = {};
       this._interval = setInterval(this._sendUpdates.bind(this), 100);
     }

@@ -27,8 +27,12 @@ export const addSourceProviderType = (constructor) => {
   
   const { typeName } = constructor;
 
+  if (typeof typeName !== 'string') {
+    throw new Error('A typeName for your source provider type must be set.');
+  }
+
   if (hasSourceProviderType(typeName)) {
-    return;
+    throw new Error('A source provider type with the same name has already been added.');
   }
 
   if (Object.getPrototypeOf(constructor).name === 'SourceProvider') {
@@ -48,8 +52,12 @@ export const addSourceProvider = (providerType, providerName, settings) => {
     providerName = providerType;
   }
 
-  if (!hasSourceProviderType(providerType) || hasSourceProvider(providerName)) {
-    return null;
+  if (!hasSourceProviderType(providerType)) {
+    throw new Error(`A source provider type with that name hasn't been added.`);
+  }
+
+  if (hasSourceProvider(providerName)) {
+    throw new Error('A source provider with that name has already been added.');
   }
 
   const SourceProvider = providerTypes[providerType];
@@ -68,7 +76,7 @@ export const addSourceProvider = (providerType, providerName, settings) => {
 export const sourceProviderAdded = (listener) => {
 
   if (typeof listener !== 'function') {
-    return;
+    throw new Error('listener is not a function');
   }
 
   sourceProviderListeners.push(listener);
@@ -114,7 +122,7 @@ export const getDefaultSourceProvider = () => {
 
 export const defaultSourceProviderSet = (listener) => {
   if (typeof listener !== 'function') {
-    return;
+    throw new Error('listener is not a function');
   }
 
   defaultSourceProviderListeners.push(listener);

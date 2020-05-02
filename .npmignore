@@ -2,3 +2,4 @@ node_modules
 tutorials
 docs
 jsdoc.conf.json
+*test.js

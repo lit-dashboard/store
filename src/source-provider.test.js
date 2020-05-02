@@ -19,10 +19,31 @@ class FailProvider extends SourceProvider {
   }
 }
 
-class TestProvider extends SourceProvider {
+class FailProvider2 extends SourceProvider {
+  constructor() {
+    super('FailProvider2', {});
+  }
+}
+
+class FailProvider3 extends SourceProvider {
+
+  static get typeName() {
+    return 'FailProvider3';
+  }
 
   constructor() {
-    super('TestProvider');
+    super('FailProvider3');
+  }
+}
+
+class TestProvider extends SourceProvider {
+
+  static get typeName() {
+    return 'TestProvider';
+  }
+
+  constructor() {
+    super('TestProvider', {});
   }
 
   userUpdate(key, value) {
@@ -42,10 +63,22 @@ describe('source-provider.js', () => {
       }).toThrow('Cannot construct SourceProvider instances directly');
     });
 
-    it(`Fails to create a SourceProvider that doesn't pass a providerName into the super constructor`, () => {
+    it(`Fails to create a SourceProvider that doesn't pass a providerName into the super constructor.`, () => {
       expect(() => {
         new FailProvider();
       }).toThrow(`The providerName needs to be passed into super() from your provider's constructor.`);
+    });
+
+    it(`Fails to create a SourceProvider that define a typeName`, () => {
+      expect(() => {
+        new FailProvider2();
+      }).toThrow(`A typeName string must be defined.`);
+    });
+    
+    it(`Fails to create a SourceProvider that doesn't pass settings into the super constructor.`, () => {
+      expect(() => {
+        new FailProvider3();
+      }).toThrow(`settings must be passed into the super() from your provider's constructor.`);
     });
 
     let testProvider;

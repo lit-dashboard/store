@@ -19,10 +19,6 @@ class SourceProvider {
 		return {};
   }
 
-  get settings() {
-    return {};
-  }
-
   /**
    * Parent class all source providers must inherit from. Each source provider
    * instance is responsible for maintaining its own state object in the store. 
@@ -31,17 +27,29 @@ class SourceProvider {
    * @abstract
    * @param {string} providerName - The name of the provider.
    */
-  constructor(providerName) {
+  constructor(providerName, settings) {
 
     if (new.target === SourceProvider) {
-      throw new TypeError("Cannot construct SourceProvider instances directly");
+      throw new TypeError("Cannot construct SourceProvider instances directly.");
     }
 
     if (typeof providerName !== 'string') {
       throw new TypeError("The providerName needs to be passed into super() from your provider's constructor.");
     }
 
+    if (typeof settings === 'undefined') {
+      throw new Error("settings must be passed into the super() from your provider's constructor.");
+    }
+
+    if (typeof this.constructor.typeName !== 'string') {
+      throw new Error("A typeName string must be defined.");
+    }
+
     this._providerName = providerName;
+    this.settings = {
+      ...this.constructor.settingsDefaults,
+      ...settings
+    };
     this._sourceUpdates = {};
     this._interval = setInterval(this._sendUpdates.bind(this), 100);
   }
