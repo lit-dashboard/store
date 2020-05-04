@@ -30,6 +30,9 @@ const createSource = () => {
 };
 
 const getSourceObject = (providerName, key) => {
+
+  key = normalizeKey(key);
+
   if (typeof sourceObjectRefs[providerName] === 'undefined') {
     sourceObjectRefs[providerName] = {};
   }
@@ -95,7 +98,7 @@ const notifySubscribers = (providerName, key) => {
       for (let id in subscribers[providerName][sourceKey] || {}) {
         const subscriber = subscribers[providerName][sourceKey][id];
         const source = getSource(providerName, sourceKey);
-        subscriber(source, sourceKey, key);
+        subscriber(source, sourceKey, normalizeKey(key));
       }
     });
   }
@@ -111,7 +114,8 @@ const notifySubscribers = (providerName, key) => {
 
 const notifySubscribersRemoved = (providerName, keys) => {
   if (providerName in subscribers) {
-    for (let key in subscribers[providerName]) {
+    for (let key of keys) {
+      key = normalizeKey(key);
       for (let id in subscribers[providerName][key]) {
         const subscriber = subscribers[providerName][key][id];
         subscriber(undefined, key, key);
@@ -155,21 +159,16 @@ const cleanSource = (providerName, rawSources, normalizedKeyParts) => {
     !rawSource.__fromProvider__
   ) {
     delete rawSources[keyPart];
-  }
-
-  if (typeof rawSources[keyPart] === 'undefined') {
-    delete sources[providerName].sources[rawSource.__key__];
-    delete sources[providerName].getterValues[rawSource.__key__];
-    delete sources[providerName].setters[rawSource.__key__];
-    return true;
-  }
-
-  const providerSources = sources[providerName];
-
-  setSourceObjectProps(providerName, rawSource.__key__, rawSource);
-  
-  if (Object.keys(rawSource.__sources__).length === 0) {
-    providerSources.getterValues[rawSource.__key__] = rawSource.__value__;
+    delete sources[providerName].sources[rawSource.__normalizedKey__];
+    delete sources[providerName].getterValues[rawSource.__normalizedKey__];
+    delete sources[providerName].setters[rawSource.__normalizedKey__];
+    notifySubscribersRemoved(providerName, [rawSource.__normalizedKey__]);
+  } else {
+    const providerSources = sources[providerName];
+    setSourceObjectProps(providerName, rawSource.__normalizedKey__, rawSource);
+    if (Object.keys(rawSource.__sources__).length === 0) {
+      providerSources.getterValues[rawSource.__normalizedKey__] = rawSource.__value__;
+    }
   }
 
   return true;
@@ -183,7 +182,7 @@ export const getRawSource = (providerName, key) => {
   let sourcesRoot = getRawSources(providerName);
 
   if (typeof sourcesRoot === 'undefined') {
-    return null;
+    return undefined;
   }
 
   if (typeof key !== 'string') {
@@ -198,17 +197,17 @@ export const getRawSource = (providerName, key) => {
     const keyPart = keyParts[index];
 
     if (keyParts.length - 1 === parseInt(index)) {
-      return (keyPart in sources) ? sources[keyPart] : null;
+      return (keyPart in sources) ? sources[keyPart] : undefined;
     }
 
     if (keyPart in sources) {
       sources = sources[keyPart].__sources__;
     } else {
-      return null;
+      return undefined;
     }
   }
 
-  return null;
+  return undefined;
 }
 
 export const getSources = (providerName) => {
@@ -231,22 +230,22 @@ export const subscribe = (providerName, key, callback, callImmediately) => {
     throw new Error('Callback is not a function');
   }
 
-  key = normalizeKey(key);
+  const normalizedKey = normalizeKey(key);
 
   if (subscribers[providerName] === undefined) {
     subscribers[providerName] = {};
   }
 
-  if (subscribers[providerName][key] === undefined) {
-    subscribers[providerName][key] = {};
+  if (subscribers[providerName][normalizedKey] === undefined) {
+    subscribers[providerName][normalizedKey] = {};
   }
 
   const id = nextSubscriberId;
   nextSubscriberId++;
-  subscribers[providerName][key][id] = callback;
+  subscribers[providerName][normalizedKey][id] = callback;
 
   if (callImmediately) {
-    const source = getSource(providerName, key);
+    const source = getSource(providerName, normalizedKey);
     if (source !== undefined) {
       callback(source, key, key);
     }
@@ -463,6 +462,6 @@ export const sourcesChanged = (providerName, sourceChanges) => {
       rawSources = rawSources[keyPart].__sources__;
     });
 
-    notifySubscribers(providerName, normalizedKey);
+    notifySubscribers(providerName, key);
   }
 };

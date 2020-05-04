@@ -942,6 +942,8 @@
   };
 
   var getSourceObject = (providerName, key) => {
+    key = normalizeKey(key);
+
     if (typeof sourceObjectRefs[providerName] === 'undefined') {
       sourceObjectRefs[providerName] = {};
     }
@@ -1018,7 +1020,7 @@
         for (var id in subscribers[providerName][sourceKey] || {}) {
           var subscriber = subscribers[providerName][sourceKey][id];
           var source = getSource(providerName, sourceKey);
-          subscriber(source, sourceKey, key);
+          subscriber(source, sourceKey, normalizeKey(key));
         }
       });
     }
@@ -1034,7 +1036,9 @@
 
   var notifySubscribersRemoved = (providerName, keys) => {
     if (providerName in subscribers) {
-      for (var key in subscribers[providerName]) {
+      for (var key of keys) {
+        key = normalizeKey(key);
+
         for (var id in subscribers[providerName][key]) {
           var subscriber = subscribers[providerName][key][id];
           subscriber(undefined, key, key);
@@ -1075,20 +1079,17 @@
 
     if (Object.keys(rawSource.__sources__).length === 0 && !rawSource.__fromProvider__) {
       delete rawSources[keyPart];
-    }
+      delete sources[providerName].sources[rawSource.__normalizedKey__];
+      delete sources[providerName].getterValues[rawSource.__normalizedKey__];
+      delete sources[providerName].setters[rawSource.__normalizedKey__];
+      notifySubscribersRemoved(providerName, [rawSource.__normalizedKey__]);
+    } else {
+      var providerSources = sources[providerName];
+      setSourceObjectProps(providerName, rawSource.__normalizedKey__, rawSource);
 
-    if (typeof rawSources[keyPart] === 'undefined') {
-      delete sources[providerName].sources[rawSource.__key__];
-      delete sources[providerName].getterValues[rawSource.__key__];
-      delete sources[providerName].setters[rawSource.__key__];
-      return true;
-    }
-
-    var providerSources = sources[providerName];
-    setSourceObjectProps(providerName, rawSource.__key__, rawSource);
-
-    if (Object.keys(rawSource.__sources__).length === 0) {
-      providerSources.getterValues[rawSource.__key__] = rawSource.__value__;
+      if (Object.keys(rawSource.__sources__).length === 0) {
+        providerSources.getterValues[rawSource.__normalizedKey__] = rawSource.__value__;
+      }
     }
 
     return true;
@@ -1101,7 +1102,7 @@
     var sourcesRoot = getRawSources(providerName);
 
     if (typeof sourcesRoot === 'undefined') {
-      return null;
+      return undefined;
     }
 
     if (typeof key !== 'string') {
@@ -1115,17 +1116,17 @@
       var keyPart = keyParts[index];
 
       if (keyParts.length - 1 === parseInt(index)) {
-        return keyPart in sources ? sources[keyPart] : null;
+        return keyPart in sources ? sources[keyPart] : undefined;
       }
 
       if (keyPart in sources) {
         sources = sources[keyPart].__sources__;
       } else {
-        return null;
+        return undefined;
       }
     }
 
-    return null;
+    return undefined;
   };
   var getSources = providerName => {
     if (providerName in sources) {
@@ -1148,22 +1149,22 @@
       throw new Error('Callback is not a function');
     }
 
-    key = normalizeKey(key);
+    var normalizedKey = normalizeKey(key);
 
     if (subscribers[providerName] === undefined) {
       subscribers[providerName] = {};
     }
 
-    if (subscribers[providerName][key] === undefined) {
-      subscribers[providerName][key] = {};
+    if (subscribers[providerName][normalizedKey] === undefined) {
+      subscribers[providerName][normalizedKey] = {};
     }
 
     var id = nextSubscriberId;
     nextSubscriberId++;
-    subscribers[providerName][key][id] = callback;
+    subscribers[providerName][normalizedKey][id] = callback;
 
     if (callImmediately) {
-      var source = getSource(providerName, key);
+      var source = getSource(providerName, normalizedKey);
 
       if (source !== undefined) {
         callback(source, key, key);
@@ -1351,7 +1352,7 @@
         prevRawSource = rawSources[keyPart];
         rawSources = rawSources[keyPart].__sources__;
       });
-      notifySubscribers(providerName, normalizedKey);
+      notifySubscribers(providerName, key);
     };
 
     for (var key in sourceChanges) {

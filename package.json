@@ -20,6 +20,7 @@
   },
   "scripts": {
     "test": "jest",
+    "test:coverage": "npm test -- --coverage --watchAll=false",
     "dist": "rollup -c",
     "generate-docs": "jsdoc -c jsdoc.conf.json"
   },
