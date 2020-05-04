@@ -107,12 +107,12 @@ const notifySubscribers = (providerName, key) => {
     for (let id in subscribersAll[providerName]) {
       const subscriber = subscribersAll[providerName][id];
       const source = getSource(providerName, key);
-      subscriber(source, key);
+      subscriber(source, normalizeKey(key));
     }
   }
 };
 
-const notifySubscribersRemoved = (providerName, keys) => {
+const notifySubscribersRemoved = (providerName, keys, keysFomProviders) => {
   if (providerName in subscribers) {
     for (let key of keys) {
       key = normalizeKey(key);
@@ -124,9 +124,9 @@ const notifySubscribersRemoved = (providerName, keys) => {
   }
 
   if (providerName in subscribersAll) {
-    for (let id in subscribersAll[providerName]) {
-      const subscriber = subscribersAll[providerName][id];
-      for (let key of keys) {
+    for (let key of keysFomProviders || keys) {
+      for (let id in subscribersAll[providerName]) {
+        const subscriber = subscribersAll[providerName][id];
         subscriber(undefined, key);
       }
     }
@@ -274,8 +274,11 @@ export const subscribeAll = (providerName, callback, callImmediately) => {
   if (callImmediately) {
     const sources = getSources(providerName);
     Object.getOwnPropertyNames(sources || {}).forEach(key => {
-      const source = sources[key];
-      callback(source, key);
+      const rawSource = getRawSource(providerName, key);
+      if (rawSource.__fromProvider__) {
+        const source = sources[key];
+        callback(source, key);
+      }
     });
   }
 
@@ -295,6 +298,9 @@ export const clearSources = (providerName) => {
   }
 
   const sourceKeys = Object.getOwnPropertyNames(getSources(providerName) || {});
+  const keysFomProviders = sourceKeys.filter(key => {
+    return getRawSource(providerName, key).__fromProvider__;
+  });
 
   for (let key in sources[providerName].getterValues) {
     const getterValue = sources[providerName].getterValues[key];
@@ -308,7 +314,7 @@ export const clearSources = (providerName) => {
   rawSources[providerName] = createRawSource();
   sources[providerName] = createSource();
 
-  notifySubscribersRemoved(providerName, sourceKeys);
+  notifySubscribersRemoved(providerName, sourceKeys, keysFomProviders);
 };
 
 export const removeSources = (providerName) => {
@@ -320,6 +326,9 @@ export const removeSources = (providerName) => {
   }
 
   const sourceKeys = Object.getOwnPropertyNames(getSources(providerName));
+  const keysFomProviders = sourceKeys.filter(key => {
+    return getRawSource(providerName, key).__fromProvider__;
+  });
 
   for (let key in sources[providerName].getterValues) {
     const getterValue = sources[providerName].getterValues[key];
@@ -333,7 +342,7 @@ export const removeSources = (providerName) => {
   delete rawSources[providerName];
   delete sources[providerName];
 
-  notifySubscribersRemoved(providerName, sourceKeys);
+  notifySubscribersRemoved(providerName, sourceKeys, keysFomProviders);
 };
 
 export const sourcesRemoved = (providerName, sourceRemovals) => {
@@ -444,7 +453,7 @@ export const sourcesChanged = (providerName, sourceChanges) => {
 
         const sourceProvider = getSourceProvider(providerName);
         providerSources.setters[normalizedKeyPartsJoined] = (value) => {
-          sourceProvider.userUpdate(sourceKey, value);
+          sourceProvider.userUpdate(normalizedKeyPartsJoined, value);
         };
 
       }

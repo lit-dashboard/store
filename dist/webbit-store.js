@@ -1029,12 +1029,12 @@
       for (var id in subscribersAll[providerName]) {
         var subscriber = subscribersAll[providerName][id];
         var source = getSource(providerName, key);
-        subscriber(source, key);
+        subscriber(source, normalizeKey(key));
       }
     }
   };
 
-  var notifySubscribersRemoved = (providerName, keys) => {
+  var notifySubscribersRemoved = (providerName, keys, keysFomProviders) => {
     if (providerName in subscribers) {
       for (var key of keys) {
         key = normalizeKey(key);
@@ -1047,10 +1047,10 @@
     }
 
     if (providerName in subscribersAll) {
-      for (var _id in subscribersAll[providerName]) {
-        var _subscriber = subscribersAll[providerName][_id];
+      for (var _key2 of keysFomProviders || keys) {
+        for (var _id in subscribersAll[providerName]) {
+          var _subscriber = subscribersAll[providerName][_id];
 
-        for (var _key2 of keys) {
           _subscriber(undefined, _key2);
         }
       }
@@ -1194,8 +1194,12 @@
       var _sources = getSources(providerName);
 
       Object.getOwnPropertyNames(_sources || {}).forEach(key => {
-        var source = _sources[key];
-        callback(source, key);
+        var rawSource = getRawSource(providerName, key);
+
+        if (rawSource.__fromProvider__) {
+          var source = _sources[key];
+          callback(source, key);
+        }
       });
     }
 
@@ -1213,6 +1217,9 @@
     }
 
     var sourceKeys = Object.getOwnPropertyNames(getSources(providerName) || {});
+    var keysFomProviders = sourceKeys.filter(key => {
+      return getRawSource(providerName, key).__fromProvider__;
+    });
 
     var _loop2 = function _loop2(key) {
       var getterValue = sources[providerName].getterValues[key];
@@ -1230,7 +1237,7 @@
 
     rawSources[providerName] = createRawSource();
     sources[providerName] = createSource();
-    notifySubscribersRemoved(providerName, sourceKeys);
+    notifySubscribersRemoved(providerName, sourceKeys, keysFomProviders);
   };
   var sourcesRemoved = (providerName, sourceRemovals) => {
     if (typeof rawSources[providerName] === 'undefined') {
@@ -1337,7 +1344,7 @@
           var sourceProvider = getSourceProvider(providerName);
 
           providerSources.setters[normalizedKeyPartsJoined] = value => {
-            sourceProvider.userUpdate(sourceKey, value);
+            sourceProvider.userUpdate(normalizedKeyPartsJoined, value);
           };
         }
 

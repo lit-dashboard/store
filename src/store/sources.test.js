@@ -1,15 +1,11 @@
-// functions to test:
-// 1. getRawSources
-// 2. getRawSource,
-// 3. getSources
-// 4. getSource
-// 5. subscribe
-// 6. subscribeAll
-// 7. clearSources
-// 8. removeSources
-// 9. sourcesRemoved
-// 10. sourcesChanged
+import * as mockStore from './index';
 
+const mockUserUpdate = jest.fn();
+jest.mock('./index', () => ({
+  getSourceProvider: jest.fn().mockReturnValue({
+    userUpdate: mockUserUpdate
+  })
+}));
 
 describe('sources.js', () => {
 
@@ -52,12 +48,36 @@ describe('sources.js', () => {
       addMoreSources();
       expect(Sources.getRawSources('Provider')).toMatchSnapshot();
     });
+
+    it(`returns undefined if the sources were removed`, () => {
+      addSources();
+      Sources.removeSources('Provider');
+      expect(Sources.getRawSources('Provider')).toBe(undefined);
+    });
+
+    it(`returns empty sources if the sources were cleared`, () => {
+      addSources();
+      Sources.clearSources('Provider');
+      expect(Sources.getRawSources('Provider')).toMatchSnapshot();
+    });
   });
 
   describe('getRawSource', () => {
     it(`returns undefined if there are no sources matching the provider name passed in`, () => {
       const rawSource = Sources.getRawSource('Provider', '/a');
       expect(rawSource).toBe(undefined);
+    });
+
+    it(`returns undefined if the sources were removed`, () => {
+      addSources();
+      Sources.removeSources('Provider');
+      expect(Sources.getRawSource('Provider', '/a')).toBe(undefined);
+    });
+
+    it(`returns undefined if the sources were cleared`, () => {
+      addSources();
+      Sources.clearSources('Provider');
+      expect(Sources.getRawSource('Provider', '/a')).toBe(undefined);
     });
 
     it(`gets the root source if no string is passed in`, () => {
@@ -118,6 +138,18 @@ describe('sources.js', () => {
       expect(sources).toBe(undefined);
     });
 
+    it(`returns undefined if the sources were removed`, () => {
+      addSources();
+      Sources.removeSources('Provider');
+      expect(Sources.getSources('Provider')).toBe(undefined);
+    });
+
+    it(`returns empty sources if the sources were cleared`, () => {
+      addSources();
+      Sources.clearSources('Provider');
+      expect(Sources.getSources('Provider')['/a']).toBe(undefined);
+    });
+
     it(`returns sources`, () => {
       addSources();
       const sources = Sources.getSources('Provider');
@@ -146,6 +178,18 @@ describe('sources.js', () => {
       expect(Sources.getSource('Provider', '/a/b/c/d')).toBe(undefined);
     });
 
+    it(`returns undefined if the sources were removed`, () => {
+      addSources();
+      Sources.removeSources('Provider');
+      expect(Sources.getSource('Provider', '/a')).toBe(undefined);
+    });
+
+    it(`returns undefined if the sources were cleared`, () => {
+      addSources();
+      Sources.clearSources('Provider');
+      expect(Sources.getSource('Provider', '/a')).toBe(undefined);
+    });
+
     it(`returns a source`, () => {
       addSources();
       expect(Sources.getSource('Provider', '/a').constructor.name).toBe('Source');
@@ -154,6 +198,34 @@ describe('sources.js', () => {
       expect(Sources.getSource('Provider', '/?a / c!')).toEqual({ 'd': 'e' });
       expect(Sources.getSource('Provider', '/? a'))
         .toEqual(Sources.getSource('Provider', '/a'));
+    });
+
+    it(`sets the source to undefined once it has been removed`, () => {
+      addSources();
+      const source = Sources.getSource('Provider', '/a/b');
+      expect(source.c).toBe(false);
+      Sources.sourcesRemoved('Provider', ['/a/b/c']);
+      expect(source.c).toBe(undefined);
+      addSources();
+      expect(source.c).toBe(false);
+      Sources.removeSources('Provider');
+      expect(source.c).toBe(undefined);
+    });
+
+    it(`changes the source value`, () => {
+      addSources();
+      mockStore.getSourceProvider.mockReturnValue({
+        userUpdate: mockUserUpdate
+      });
+      const source = Sources.getSource('Provider', '/a/b');
+      source.c = true;
+      expect(mockUserUpdate).toHaveBeenCalledTimes(1);
+      expect(mockUserUpdate).toHaveBeenNthCalledWith(1, '/a/b/c', true);
+
+      Sources.sourcesChanged('Provider', { '/a/b/f' : 10 });
+      source.f = 11;
+      expect(mockUserUpdate).toHaveBeenCalledTimes(2);
+      expect(mockUserUpdate).toHaveBeenNthCalledWith(2, '/a/b/f', 11);
     });
   });
 
@@ -281,5 +353,164 @@ describe('sources.js', () => {
         1, undefined, '/a', '/a'
       );
     });
+
+    it('subscribes to removals when all sources are removed', () => {
+      addSources();
+      const mockCallback = jest.fn();
+      const mockCallback2 = jest.fn();
+      const mockCallback3 = jest.fn();
+      const mockCallback4 = jest.fn();
+
+      Sources.subscribe('Provider', '/a/b/c', mockCallback);
+      Sources.subscribe('Provider', '/a/ b?', mockCallback2);
+      Sources.subscribe('Provider', '/a', mockCallback3);
+      Sources.subscribe('Provider', '/sdfsdffsd', mockCallback4);
+
+      Sources.removeSources('Provider');
+
+      expect(mockCallback).toHaveBeenCalledTimes(1);
+      expect(mockCallback).toHaveBeenNthCalledWith(1, undefined, '/a/b/c', '/a/b/c');
+
+      expect(mockCallback2).toHaveBeenCalledTimes(1);
+      expect(mockCallback2).toHaveBeenNthCalledWith(1, undefined, '/a/b', '/a/b');
+
+      expect(mockCallback3).toHaveBeenCalledTimes(1);
+      expect(mockCallback3).toHaveBeenNthCalledWith(1, undefined, '/a', '/a');
+
+      expect(mockCallback4).toHaveBeenCalledTimes(0);
+    });
+
+    it('subscribes to removals when all sources are cleared', () => {
+      addSources();
+      const mockCallback = jest.fn();
+      const mockCallback2 = jest.fn();
+      const mockCallback3 = jest.fn();
+      const mockCallback4 = jest.fn();
+
+      Sources.subscribe('Provider', '/a/b/c', mockCallback);
+      Sources.subscribe('Provider', '/a/ b?', mockCallback2);
+      Sources.subscribe('Provider', '/a', mockCallback3);
+      Sources.subscribe('Provider', '/sdfsdffsd', mockCallback4);
+
+      Sources.clearSources('Provider');
+
+      expect(mockCallback).toHaveBeenCalledTimes(1);
+      expect(mockCallback).toHaveBeenNthCalledWith(1, undefined, '/a/b/c', '/a/b/c');
+
+      expect(mockCallback2).toHaveBeenCalledTimes(1);
+      expect(mockCallback2).toHaveBeenNthCalledWith(1, undefined, '/a/b', '/a/b');
+
+      expect(mockCallback3).toHaveBeenCalledTimes(1);
+      expect(mockCallback3).toHaveBeenNthCalledWith(1, undefined, '/a', '/a');
+
+      expect(mockCallback4).toHaveBeenCalledTimes(0);
+    });
+
+    it(`does not subscribe when it has been cancelled`, () => {
+      const mockCallback = jest.fn();
+      const unsubscribe = Sources.subscribe('Provider', '/a', mockCallback);
+      unsubscribe();
+      addSources();
+      Sources.removeSources('Provider');
+      expect(mockCallback).toHaveBeenCalledTimes(0);
+    });
+  });
+
+  describe('subscribeAll', () => {
+    it(`throws an error if the callback passed in is not a function`, () => {
+      expect(() => {
+        Sources.subscribeAll('Provider');
+      }).toThrow('Callback is not a function');
+    });
+
+    it(`calls the subscriber immediately`, () => {
+      
+      Sources.sourcesChanged('Provider', {
+        '?/ a /B': true,
+        '/ foo ': 'bar',
+      });
+
+      const mockCallback = jest.fn();
+      const mockCallback2 = jest.fn();
+
+      Sources.subscribeAll('Provider', mockCallback);
+      Sources.subscribeAll('Provider', mockCallback2, true);
+
+      expect(mockCallback).toHaveBeenCalledTimes(0);
+
+      expect(mockCallback2).toHaveBeenCalledTimes(2);
+      expect(mockCallback2).toHaveBeenNthCalledWith(1, true, '/a/b');
+      expect(mockCallback2).toHaveBeenNthCalledWith(2, 'bar', '/foo');
+    });
+
+    it(`calls the subscriber when sources change`, () => {
+
+      const mockCallback = jest.fn();
+
+      Sources.subscribeAll('Provider', mockCallback);
+
+      Sources.sourcesChanged('Provider', {
+        '?/ a /B': true,
+        '/ foo ': 'bar',
+      });
+
+      expect(mockCallback).toHaveBeenCalledTimes(2);
+      expect(mockCallback).toHaveBeenNthCalledWith(1, true, '/a/b');
+      expect(mockCallback).toHaveBeenNthCalledWith(2, 'bar', '/foo');
+    });
+
+    it(`calls the subscriber when sources are removed`, () => {
+      Sources.sourcesChanged('Provider', {
+        '?/ a /B': true,
+        '/ foo ': 'bar',
+        '/a/c': 3
+      });
+
+      const mockCallback = jest.fn();
+      Sources.subscribeAll('Provider', mockCallback);
+
+      Sources.sourcesRemoved('Provider', ['/a/c']);
+      expect(mockCallback).toHaveBeenCalledTimes(1);
+      expect(mockCallback).toHaveBeenNthCalledWith(1, undefined, '/a/c');
+
+      Sources.removeSources('Provider');
+      expect(mockCallback).toHaveBeenCalledTimes(3);
+      expect(mockCallback).toHaveBeenNthCalledWith(2, undefined, '/a/b');
+      expect(mockCallback).toHaveBeenNthCalledWith(3, undefined, '/foo');
+    });
+
+    it(`calls the subscriber when sources are cleared`, () => {
+      Sources.sourcesChanged('Provider', {
+        '?/ a /B': true,
+        '/ foo ': 'bar',
+        '/a/c': 3
+      });
+
+      const mockCallback = jest.fn();
+      Sources.subscribeAll('Provider', mockCallback);
+
+      Sources.clearSources('Provider');
+      expect(mockCallback).toHaveBeenCalledTimes(3);
+      expect(mockCallback).toHaveBeenNthCalledWith(1, undefined, '/a/b');
+      expect(mockCallback).toHaveBeenNthCalledWith(2, undefined, '/foo');
+      expect(mockCallback).toHaveBeenNthCalledWith(3, undefined, '/a/c');
+    });
+
+    it(`does not subscribe when it has been cancelled`, () => {
+      const mockCallback = jest.fn();
+      const unsubscribe = Sources.subscribeAll('Provider', mockCallback);
+      unsubscribe();
+      addSources();
+      Sources.removeSources('Provider');
+      expect(mockCallback).toHaveBeenCalledTimes(0);
+    });
   });
 });
+
+
+/**
+ * Things to test:
+ * 
+ * 1. setting source values
+ * 2. getting source values once they're removed
+ */

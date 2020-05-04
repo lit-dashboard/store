@@ -1,5 +1,15 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`sources.js getRawSources returns empty sources if the sources were cleared 1`] = `
+Object {
+  "__fromProvider__": false,
+  "__key__": undefined,
+  "__normalizedKey__": undefined,
+  "__sources__": Object {},
+  "__value__": undefined,
+}
+`;
+
 exports[`sources.js getRawSources returns raw sources for the passed in provider if sources for it exist 1`] = `
 Object {
   "__fromProvider__": false,
