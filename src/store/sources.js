@@ -1,7 +1,11 @@
 import { normalizeKey } from '../util';
 import { getSourceProvider } from './index';
 
-class Source {}
+class Source {
+  static get __WEBBIT_CLASSNAME__() {
+    return 'Source';
+  }
+}
 
 const rawSources = {};
 const sources = {};
@@ -134,7 +138,7 @@ const notifySubscribersRemoved = (providerName, keys, keysFomProviders) => {
 };
 
 const isSourceType = (value) => {
-  return value instanceof Object && value.constructor.name === 'Source';
+  return value instanceof Object && value.constructor.__WEBBIT_CLASSNAME__ === 'Source';
 };
 
 const cleanSource = (providerName, rawSources, normalizedKeyParts) => {

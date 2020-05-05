@@ -10,6 +10,10 @@ import {
 } from './store/sources';
 
 class SourceProvider {
+
+  static get __WEBBIT_CLASSNAME__() {
+    return 'SourceProvider';
+  }
   
   static get typeName() {
     return null;

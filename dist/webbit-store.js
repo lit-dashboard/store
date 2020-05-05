@@ -838,7 +838,7 @@
       throw new Error('A source provider type with the same name has already been added.');
     }
 
-    if (Object.getPrototypeOf(constructor).name === 'SourceProvider') {
+    if (constructor.__WEBBIT_CLASSNAME__ === 'SourceProvider') {
       providerTypes[typeName] = constructor;
     }
   };
@@ -914,7 +914,12 @@
     defaultSourceProviderListeners.push(listener);
   };
 
-  class Source {}
+  class Source {
+    static get __WEBBIT_CLASSNAME__() {
+      return 'Source';
+    }
+
+  }
 
   var rawSources = {};
   var sources = {};
@@ -1058,7 +1063,7 @@
   };
 
   var isSourceType = value => {
-    return value instanceof Object && value.constructor.name === 'Source';
+    return value instanceof Object && value.constructor.__WEBBIT_CLASSNAME__ === 'Source';
   };
 
   var cleanSource = (providerName, rawSources, normalizedKeyParts) => {
@@ -1368,6 +1373,10 @@
   };
 
   class SourceProvider {
+    static get __WEBBIT_CLASSNAME__() {
+      return 'SourceProvider';
+    }
+
     static get typeName() {
       return null;
     }

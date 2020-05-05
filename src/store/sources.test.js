@@ -153,14 +153,14 @@ describe('sources.js', () => {
     it(`returns sources`, () => {
       addSources();
       const sources = Sources.getSources('Provider');
-      expect(sources['/a'].constructor.name).toBe('Source');
+      expect(sources['/a'].constructor.__WEBBIT_CLASSNAME__).toBe('Source');
 
       expect(sources['/a'].b.c).toBe(false);
       expect(sources[' / a']).toBe(undefined);
       expect(sources['/a/b/c']).toBe(false);
 
       addMoreSources();
-      expect(sources['/a'].constructor.name).toBe('Source');
+      expect(sources['/a'].constructor.__WEBBIT_CLASSNAME__).toBe('Source');
       expect(sources['/a'].b.c).toBe(true);
       expect(sources['/a/b/c']).toBe(true);
     });
@@ -192,8 +192,8 @@ describe('sources.js', () => {
 
     it(`returns a source`, () => {
       addSources();
-      expect(Sources.getSource('Provider', '/a').constructor.name).toBe('Source');
-      expect(Sources.getSource('Provider', '/a').b.constructor.name).toBe('Source');
+      expect(Sources.getSource('Provider', '/a').constructor.__WEBBIT_CLASSNAME__).toBe('Source');
+      expect(Sources.getSource('Provider', '/a').b.constructor.__WEBBIT_CLASSNAME__).toBe('Source');
       expect(Sources.getSource('Provider', '/a').b.c).toBe(false);
       expect(Sources.getSource('Provider', '/?a / c!')).toEqual({ 'd': 'e' });
       expect(Sources.getSource('Provider', '/? a'))

@@ -35,7 +35,7 @@ export const addSourceProviderType = (constructor) => {
     throw new Error('A source provider type with the same name has already been added.');
   }
 
-  if (Object.getPrototypeOf(constructor).name === 'SourceProvider') {
+  if (constructor.__WEBBIT_CLASSNAME__ === 'SourceProvider') {
     providerTypes[typeName] = constructor;
   }
 }
