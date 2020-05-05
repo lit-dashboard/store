@@ -1673,6 +1673,8 @@
   exports.removeSourceProvider = removeSourceProvider;
   exports.setDefaultSourceProvider = setDefaultSourceProvider;
   exports.sourceProviderAdded = sourceProviderAdded;
+  exports.subscribe = subscribe;
+  exports.subscribeAll = subscribeAll;
 
   Object.defineProperty(exports, '__esModule', { value: true });
 
