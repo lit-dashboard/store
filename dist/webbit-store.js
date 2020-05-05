@@ -1663,6 +1663,8 @@
   exports.addSourceProviderType = addSourceProviderType;
   exports.defaultSourceProviderSet = defaultSourceProviderSet;
   exports.getDefaultSourceProvider = getDefaultSourceProvider;
+  exports.getRawSource = getRawSource;
+  exports.getRawSources = getRawSources;
   exports.getSource = getSource;
   exports.getSourceProvider = getSourceProvider;
   exports.getSourceProviderNames = getSourceProviderNames;

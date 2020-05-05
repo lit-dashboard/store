@@ -128,4 +128,11 @@ export const defaultSourceProviderSet = (listener) => {
   defaultSourceProviderListeners.push(listener);
 };
 
-export { getSources, getSource, subscribe, subscribeAll } from './sources';
+export { 
+  getRawSource, 
+  getRawSources, 
+  getSources, 
+  getSource, 
+  subscribe, 
+  subscribeAll
+} from './sources';
