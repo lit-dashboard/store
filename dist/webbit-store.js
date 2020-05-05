@@ -1177,7 +1177,7 @@
     }
 
     var unsubscribe = () => {
-      delete subscribers[providerName][key][id];
+      delete subscribers[providerName][normalizedKey][id];
     };
 
     return unsubscribe;

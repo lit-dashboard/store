@@ -256,7 +256,7 @@ export const subscribe = (providerName, key, callback, callImmediately) => {
   }
 
   const unsubscribe = () => {
-    delete subscribers[providerName][key][id];
+    delete subscribers[providerName][normalizedKey][id];
   };
 
   return unsubscribe;

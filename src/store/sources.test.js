@@ -408,7 +408,7 @@ describe('sources.js', () => {
 
     it(`does not subscribe when it has been cancelled`, () => {
       const mockCallback = jest.fn();
-      const unsubscribe = Sources.subscribe('Provider', '/a', mockCallback);
+      const unsubscribe = Sources.subscribe('Provider', '/a?', mockCallback);
       unsubscribe();
       addSources();
       Sources.removeSources('Provider');
