@@ -220,7 +220,7 @@ describe('sources.js', () => {
       const source = Sources.getSource('Provider', '/a/b');
       source.c = true;
       expect(mockUserUpdate).toHaveBeenCalledTimes(1);
-      expect(mockUserUpdate).toHaveBeenNthCalledWith(1, '/a/b/c', true);
+      expect(mockUserUpdate).toHaveBeenNthCalledWith(1, '/ a /b/ c', true);
 
       Sources.sourcesChanged('Provider', { '/a/b/f' : 10 });
       source.f = 11;

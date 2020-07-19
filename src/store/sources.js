@@ -457,7 +457,7 @@ export const sourcesChanged = (providerName, sourceChanges) => {
 
         const sourceProvider = getSourceProvider(providerName);
         providerSources.setters[normalizedKeyPartsJoined] = (value) => {
-          sourceProvider.userUpdate(normalizedKeyPartsJoined, value);
+          sourceProvider.userUpdate(sourceKey, value);
         };
 
       }
