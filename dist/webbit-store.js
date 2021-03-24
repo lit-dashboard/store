@@ -1415,6 +1415,7 @@
       this.settings = _objectSpread2({}, this.constructor.settingsDefaults, {}, settings);
       this._sourceUpdates = {};
       this._interval = setInterval(this._sendUpdates.bind(this), 100);
+      this.clearSourcesTimeoutId = null;
     }
     /** 
      * Updates the value of a source in the store. If the source doesn't
@@ -1429,6 +1430,8 @@
 
 
     updateSource(key, value) {
+      clearTimeout(this._clearSourcesTimeoutId);
+
       if (this._sourceUpdates[key] === undefined) {
         this._sourceUpdates[key] = {
           first: {
@@ -1539,6 +1542,27 @@
           callback();
         }
       });
+    }
+    /**
+     * Removes all sources in the store for this provider after a period of time. 
+     * If a source is set or this function is called before that period of time
+     * ends, sources will not be cleared. This is useful for preventing sources
+     * from being cleared on an unreliable network. Should only be called internally 
+     * by the source provider.
+     * 
+     * @protected 
+     * @param {number} timeout - The period of time before clearing the sources
+     * in milliseconds. 
+     * @param {function} callback - An optional callback. Called when sources
+     * have been cleared.
+     */
+
+
+    clearSourcesWithTimeout(timeout, callback) {
+      clearTimeout(this._clearSourcesTimeoutId);
+      this._clearSourcesTimeoutId = setTimeout(() => {
+        this.clearSources(callback);
+      }, timeout);
     }
     /**
      * Called when a source's value is modified by the user. This method
