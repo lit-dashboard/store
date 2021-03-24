@@ -260,6 +260,23 @@ describe('source-provider.js', () => {
       expect(mockSources.clearSources).toHaveBeenNthCalledWith(1, 'TestProvider');
     });
 
+    it(`clears sources after a timeout`, () => {
+      testProvider.clearSourcesWithTimeout(2000);
+      jest.advanceTimersByTime(1500);
+      expect(mockSources.clearSources).toHaveBeenCalledTimes(0);
+      jest.advanceTimersByTime(1500);
+      expect(mockSources.clearSources).toHaveBeenCalledTimes(1);
+    });
+
+    it(`stops sources from clearing if sources are updated before timeout expires`, () => {
+      testProvider.clearSourcesWithTimeout(2000);
+      jest.advanceTimersByTime(1500);
+      expect(mockSources.clearSources).toHaveBeenCalledTimes(0);
+      testProvider.updateSource('/a', 1);
+      jest.advanceTimersByTime(1500);
+      expect(mockSources.clearSources).toHaveBeenCalledTimes(0);
+    });
+
     it(`makes updates immediately when clearSources is called`, () => {
       testProvider.updateSource('/a', 1);
       testProvider.clearSources();
