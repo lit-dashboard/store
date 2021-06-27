@@ -1,150 +1,15 @@
 import { normalizeKey } from '../../util';
 import { getSourceProvider } from '../index';
-import { Source, createRawSource, createSource, isSourceType } from './source-factory';
+import { createRawSource, createSource, isSourceType } from './source-factory';
 import { 
   addSubscriber, 
   addSubscriberAll,
   notifySubscribers,
   notifySubscribersRemoved,
 } from './subscribers';
-
-const rawSources = {};
-const sources = {};
-const sourceObjectRefs = {};
-
-const getSourceObject = (providerName, key) => {
-
-  key = normalizeKey(key);
-
-  if (typeof sourceObjectRefs[providerName] === 'undefined') {
-    sourceObjectRefs[providerName] = {};
-  }
-
-  if (typeof sourceObjectRefs[providerName][key] === 'undefined') {
-    sourceObjectRefs[providerName][key] = new Source();
-  }
-
-  return sourceObjectRefs[providerName][key];
-};
-
-const setSourceObjectProps = (providerName, key, rawSource) => {
-  const value = getSourceObject(providerName, key);
-
-  Object.getOwnPropertyNames(value).forEach(prop => {
-    if (prop in rawSource.__sources__) {
-      return;
-    }
-    delete value[prop];
-  });
-
-  for (let key in rawSource.__sources__) {
-
-    const normalizedKey = normalizeKey(key);
-
-    if (normalizedKey in value) {
-      continue;
-    }
-
-    const rawSubSource = rawSource.__sources__[key];
-    Object.defineProperty(value, normalizedKey, {
-      configurable: true,
-      set(value) {
-        const providerSources = sources[providerName];
-
-        if (typeof providerSources === 'undefined') {
-          return;
-        }
-
-        const setter = providerSources.setters[rawSubSource.__normalizedKey__];
-
-        if (typeof setter === 'undefined') {
-          return;
-        }
-
-        setter(value);
-      },
-      get() {
-        if (typeof sources[providerName] === 'undefined') {
-          return undefined;
-        }
-        return sources[providerName].getterValues[rawSubSource.__normalizedKey__];
-      }
-    });
-  }
-};
-
-const cleanSource = (providerName, rawSources, normalizedKeyParts) => {
-  if (normalizedKeyParts.length === 0) {
-    return false;
-  }
-
-  const keyPart = normalizedKeyParts[0];
-
-  const rawSource = rawSources[keyPart];
-
-  if (typeof rawSource === 'undefined') {
-    return false;
-  }
-
-  if (normalizedKeyParts.length > 1) {
-    cleanSource(providerName, rawSource.__sources__, normalizedKeyParts.slice(1));
-  }
-
-  if (
-    Object.keys(rawSource.__sources__).length === 0 &&
-    !rawSource.__fromProvider__
-  ) {
-    delete rawSources[keyPart];
-    delete sources[providerName].sources[rawSource.__normalizedKey__];
-    delete sources[providerName].getterValues[rawSource.__normalizedKey__];
-    delete sources[providerName].setters[rawSource.__normalizedKey__];
-    notifySubscribersRemoved(providerName, [rawSource.__normalizedKey__]);
-  } else {
-    const providerSources = sources[providerName];
-    setSourceObjectProps(providerName, rawSource.__normalizedKey__, rawSource);
-    if (Object.keys(rawSource.__sources__).length === 0) {
-      providerSources.getterValues[rawSource.__normalizedKey__] = rawSource.__value__;
-    }
-  }
-
-  return true;
-};
-
-export const getRawSources = (providerName) => {
-  return rawSources[providerName];
-};
-
-export const getRawSource = (providerName, key) => {
-  let sourcesRoot = getRawSources(providerName);
-
-  if (typeof sourcesRoot === 'undefined') {
-    return undefined;
-  }
-
-  if (typeof key !== 'string') {
-    return sourcesRoot;
-  }
-
-  const keyParts = normalizeKey(key).split('/');
-
-  let sources = sourcesRoot.__sources__;
-
-  for (let index in keyParts) {
-    const keyPart = keyParts[index];
-
-    if (keyParts.length - 1 === parseInt(index)) {
-      return (keyPart in sources) ? sources[keyPart] : undefined;
-    }
-
-    if (keyPart in sources) {
-      sources = sources[keyPart].__sources__;
-    } else {
-      return undefined;
-    }
-  }
-
-  return undefined;
-}
+import { getSourceObject, setSourceObjectProps } from './source-object';
+import { rawSources, sources, cleanSource, getRawSource } from './sources';
+export { getRawSource, getRawSources } from './sources';
 
 export const getSources = (providerName) => {
   if (providerName in sources) {
@@ -166,7 +31,7 @@ export const subscribe = (providerName, key, callback, callImmediately) => {
 };
 
 export const subscribeAll = (providerName, callback, callImmediately) => {
-  return addSubscriberAll(providerName, callback, callImmediately, getSources, getRawSource);
+  return addSubscriberAll(providerName, callback, callImmediately, getSources);
 };
 
 export const clearSources = (providerName) => {
@@ -344,7 +209,7 @@ export const sourcesChanged = (providerName, sourceChanges) => {
           providerSources.getterValues[prevRawSource.__normalizedKey__] = getSourceObject(providerName, prevRawSource.__normalizedKey__);
         }
 
-        setSourceObjectProps(providerName, prevRawSource.__normalizedKey__, prevRawSource);
+        setSourceObjectProps(providerName, prevRawSource.__normalizedKey__, prevRawSource, sources);
       }
 
       prevRawSource = rawSources[keyPart];

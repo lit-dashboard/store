@@ -1,4 +1,5 @@
 import { normalizeKey } from '../../util';
+import { getRawSource } from './sources';
 
 let nextSubscriberId = 0;
 const subscribers = {};
@@ -37,7 +38,7 @@ export const addSubscriber = (providerName, key, callback, callImmediately, getS
   return unsubscribe;
 };
 
-export const addSubscriberAll = (providerName, callback, callImmediately, getSources, getRawSource) => {
+export const addSubscriberAll = (providerName, callback, callImmediately, getSources) => {
   if (typeof callback !== 'function') {
     throw new Error('Callback is not a function');
   }

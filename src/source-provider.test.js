@@ -13,6 +13,10 @@ jest.mock('./store/sources', () => ({
   sourcesRemoved: jest.fn()
 }));
 
+// jest.mock('./store/sources/sources', () => ({
+//   getRawSource: jest.fn().mockReturnValue({}),
+// }));
+
 class FailProvider extends SourceProvider {
   constructor() {
     super();

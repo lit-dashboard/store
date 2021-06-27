@@ -2,11 +2,11 @@ import {
   subscribe,
   subscribeAll,
   sourcesChanged,
-  getRawSource,
   getSource,
   getSources,
   clearSources, 
-  sourcesRemoved
+  sourcesRemoved,
+  getRawSource,
 } from './store/sources';
 
 class SourceProvider {
