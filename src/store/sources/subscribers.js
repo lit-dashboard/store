@@ -1,13 +1,12 @@
 import { normalizeKey } from '../../util';
-import { getRawSource, getSources, getSource } from './sources';
-
 
 class Subscribers {
 
-  constructor() {
+  constructor(sources) {
     this.nextSubscriberId = 0;
     this.subscribers = {};
     this.subscribersAll = {};
+    this.sources = sources;
   }
 
   subscribe(providerName, key, callback, callImmediately) {
@@ -30,7 +29,7 @@ class Subscribers {
     this.subscribers[providerName][normalizedKey][id] = callback;
   
     if (callImmediately) {
-      const source = getSource(providerName, normalizeKey(key));
+      const source = this.sources.getSource(providerName, normalizeKey(key));
       if (source !== undefined) {
         callback(source, key, key);
       }
@@ -57,9 +56,9 @@ class Subscribers {
     this.subscribersAll[providerName][id] = callback;
   
     if (callImmediately) {
-      const sources = getSources(providerName);
+      const sources = this.sources.getSources(providerName);
       Object.getOwnPropertyNames(sources || {}).forEach(key => {
-        const rawSource = getRawSource(providerName, key);
+        const rawSource = this.sources.getRawSource(providerName, key);
         if (rawSource.__fromProvider__) {
           const source = sources[key];
           callback(source, key);
@@ -81,7 +80,7 @@ class Subscribers {
         const sourceKey = keyParts.slice(0, index + 1).join('/');
         for (let id in this.subscribers[providerName][sourceKey] || {}) {
           const subscriber = this.subscribers[providerName][sourceKey][id];
-          const source = getSource(providerName, sourceKey);
+          const source = this.sources.getSource(providerName, sourceKey);
           subscriber(source, sourceKey, normalizeKey(key));
         }
       });
@@ -90,7 +89,7 @@ class Subscribers {
     if (providerName in this.subscribersAll) {
       for (let id in this.subscribersAll[providerName]) {
         const subscriber = this.subscribersAll[providerName][id];
-        const source = getSource(providerName, key);
+        const source = this.sources.getSource(providerName, key);
         subscriber(source, normalizeKey(key));
       }
     }
@@ -118,20 +117,4 @@ class Subscribers {
   }
 }
 
-const subscribers = new Subscribers();
-
-export const subscribe = (providerName, key, callback, callImmediately) => {
- return subscribers.subscribe(providerName, key, callback, callImmediately);
-};
-
-export const subscribeAll = (providerName, callback, callImmediately) => {
-  return subscribers.subscribeAll(providerName, callback, callImmediately);
-};
-
-export const notifySubscribers = (providerName, key) => {
-  subscribers.notifySubscribers(providerName, key);
-};
-
-export const notifySubscribersRemoved = (providerName, keys, keysFomProviders) => {
-  subscribers.notifySubscribersRemoved(providerName, keys, keysFomProviders);
-};
+export default Subscribers;

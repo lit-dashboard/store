@@ -1,9 +1,8 @@
 import SourceObjects from './source-object';
-import { notifySubscribersRemoved, notifySubscribers } from './subscribers';
+import Subscribers from './subscribers';
 import { normalizeKey } from '../../util';
 import { createRawSource, createSource, isSourceType } from './source-factory';
 import { getSourceProvider } from '../index';
-
 
 class Sources {
 
@@ -11,6 +10,7 @@ class Sources {
     this.rawSources = {};
     this.sources = {};
     this.sourceObjects = new SourceObjects(this.sources);
+    this.subscribers = new Subscribers(this);
   }
 
   cleanSource(providerName, rawSources, normalizedKeyParts) {
@@ -38,7 +38,7 @@ class Sources {
       delete this.sources[providerName].sources[rawSource.__normalizedKey__];
       delete this.sources[providerName].getterValues[rawSource.__normalizedKey__];
       delete this.sources[providerName].setters[rawSource.__normalizedKey__];
-      notifySubscribersRemoved(providerName, [rawSource.__normalizedKey__]);
+      this.subscribers.notifySubscribersRemoved(providerName, [rawSource.__normalizedKey__]);
     } else {
       const providerSources = this.sources[providerName];
       this.sourceObjects.setSourceObjectProps(providerName, rawSource);
@@ -126,7 +126,7 @@ class Sources {
     this.rawSources[providerName] = createRawSource();
     this.sources[providerName] = createSource();
   
-    notifySubscribersRemoved(providerName, sourceKeys, keysFomProviders);
+    this.subscribers.notifySubscribersRemoved(providerName, sourceKeys, keysFomProviders);
   }
 
   removeSources(providerName) {
@@ -154,7 +154,7 @@ class Sources {
     delete this.rawSources[providerName];
     delete this.sources[providerName];
   
-    notifySubscribersRemoved(providerName, sourceKeys, keysFomProviders);
+    this.subscribers.notifySubscribersRemoved(providerName, sourceKeys, keysFomProviders);
   }
 
   sourcesRemoved(providerName, sourceRemovals) {
@@ -285,41 +285,17 @@ class Sources {
         rawSources = rawSources[keyPart].__sources__;
       });
   
-      notifySubscribers(providerName, key);
+      this.subscribers.notifySubscribers(providerName, key);
     }
+  }
+
+  subscribe(providerName, key, callback, callImmediately) {
+    return this.subscribers.subscribe(providerName, key, callback, callImmediately);
+  }
+
+  subscribeAll(providerName, callback, callImmediately) {
+    return this.subscribers.subscribeAll(providerName, callback, callImmediately);
   }
 }
 
-const sourcesObject = new Sources();
-
-export const getRawSources = (providerName) => {
-  return sourcesObject.getRawSources(providerName);
-};
-
-export const getRawSource = (providerName, key) => {
-  return sourcesObject.getRawSource(providerName, key);
-}
-
-export const getSources = (providerName) => {
-  return sourcesObject.getSources(providerName);
-};
-
-export const getSource = (providerName, key) => {
-  return sourcesObject.getSource(providerName, key);
-};
-
-export const clearSources = (providerName) => {
-  return sourcesObject.clearSources(providerName);
-};
-
-export const removeSources = (providerName) => {
-  return sourcesObject.removeSources(providerName);
-};
-
-export const sourcesRemoved = (providerName, sourceRemovals) => {
-  sourcesObject.sourcesRemoved(providerName, sourceRemovals);
-};
-
-export const sourcesChanged = (providerName, sourceChanges) => {
-  sourcesObject.sourcesChanged(providerName, sourceChanges);
-};
+export default Sources;
