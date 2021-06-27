@@ -1,11 +1,11 @@
 import { normalizeKey } from '../../util';
-import { getRawSource } from './sources';
+import { getRawSource, getSources, getSource } from './sources';
 
 let nextSubscriberId = 0;
 const subscribers = {};
 const subscribersAll = {};
 
-export const addSubscriber = (providerName, key, callback, callImmediately, getSource) => {
+export const subscribe = (providerName, key, callback, callImmediately) => {
   if (typeof callback !== 'function') {
     throw new Error('Callback is not a function');
   }
@@ -38,7 +38,7 @@ export const addSubscriber = (providerName, key, callback, callImmediately, getS
   return unsubscribe;
 };
 
-export const addSubscriberAll = (providerName, callback, callImmediately, getSources) => {
+export const subscribeAll = (providerName, callback, callImmediately) => {
   if (typeof callback !== 'function') {
     throw new Error('Callback is not a function');
   }
@@ -69,7 +69,7 @@ export const addSubscriberAll = (providerName, callback, callImmediately, getSou
   return unsubscribe;
 };
 
-export const notifySubscribers = (providerName, key, getSource) => {
+export const notifySubscribers = (providerName, key) => {
   const keyParts = normalizeKey(key).split('/');
   if (providerName in subscribers) {
     keyParts.forEach((keyPart, index) => {
