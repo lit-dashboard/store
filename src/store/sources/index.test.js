@@ -1,7 +1,7 @@
-import * as mockStore from './index';
+import * as mockStore from '../index';
 
 const mockUserUpdate = jest.fn();
-jest.mock('./index', () => ({
+jest.mock('../index', () => ({
   getSourceProvider: jest.fn().mockReturnValue({
     userUpdate: mockUserUpdate
   })
@@ -33,7 +33,7 @@ describe('sources.js', () => {
 
   beforeEach(() => {
     jest.resetModules();
-    Sources = require('./sources');
+    Sources = require('../sources');
   });
 
   describe('getRawSources', () => {

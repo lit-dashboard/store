@@ -1,37 +1,16 @@
-import { normalizeKey } from '../util';
-import { getSourceProvider } from './index';
-
-class Source {
-  static get __WEBBIT_CLASSNAME__() {
-    return 'Source';
-  }
-}
+import { normalizeKey } from '../../util';
+import { getSourceProvider } from '../index';
+import { Source, createRawSource, createSource, isSourceType } from './source-factory';
+import { 
+  addSubscriber, 
+  addSubscriberAll,
+  notifySubscribers,
+  notifySubscribersRemoved,
+} from './subscribers';
 
 const rawSources = {};
 const sources = {};
 const sourceObjectRefs = {};
-
-const subscribers = {};
-const subscribersAll = {};
-let nextSubscriberId = 0;
-
-const createRawSource = () => {
-  return {
-    __normalizedKey__: undefined,
-    __fromProvider__: false,
-    __key__: undefined,
-    __value__: undefined,
-    __sources__: {}
-  };
-};
-
-const createSource = () => {
-  return {
-    getterValues: {},
-    setters: {},
-    sources: {}
-  };
-};
 
 const getSourceObject = (providerName, key) => {
 
@@ -71,7 +50,7 @@ const setSourceObjectProps = (providerName, key, rawSource) => {
       configurable: true,
       set(value) {
         const providerSources = sources[providerName];
-        
+
         if (typeof providerSources === 'undefined') {
           return;
         }
@@ -92,53 +71,6 @@ const setSourceObjectProps = (providerName, key, rawSource) => {
       }
     });
   }
-};
-
-const notifySubscribers = (providerName, key) => {
-  const keyParts = normalizeKey(key).split('/');
-  if (providerName in subscribers) {
-    keyParts.forEach((keyPart, index) => {
-      const sourceKey = keyParts.slice(0, index + 1).join('/');
-      for (let id in subscribers[providerName][sourceKey] || {}) {
-        const subscriber = subscribers[providerName][sourceKey][id];
-        const source = getSource(providerName, sourceKey);
-        subscriber(source, sourceKey, normalizeKey(key));
-      }
-    });
-  }
-
-  if (providerName in subscribersAll) {
-    for (let id in subscribersAll[providerName]) {
-      const subscriber = subscribersAll[providerName][id];
-      const source = getSource(providerName, key);
-      subscriber(source, normalizeKey(key));
-    }
-  }
-};
-
-const notifySubscribersRemoved = (providerName, keys, keysFomProviders) => {
-  if (providerName in subscribers) {
-    for (let key of keys) {
-      key = normalizeKey(key);
-      for (let id in subscribers[providerName][key]) {
-        const subscriber = subscribers[providerName][key][id];
-        subscriber(undefined, key, key);
-      }
-    }
-  }
-
-  if (providerName in subscribersAll) {
-    for (let key of keysFomProviders || keys) {
-      for (let id in subscribersAll[providerName]) {
-        const subscriber = subscribersAll[providerName][id];
-        subscriber(undefined, key);
-      }
-    }
-  }
-};
-
-const isSourceType = (value) => {
-  return value instanceof Object && value.constructor.__WEBBIT_CLASSNAME__ === 'Source';
 };
 
 const cleanSource = (providerName, rawSources, normalizedKeyParts) => {
@@ -230,67 +162,11 @@ export const getSource = (providerName, key) => {
 };
 
 export const subscribe = (providerName, key, callback, callImmediately) => {
-  if (typeof callback !== 'function') {
-    throw new Error('Callback is not a function');
-  }
-
-  const normalizedKey = normalizeKey(key);
-
-  if (subscribers[providerName] === undefined) {
-    subscribers[providerName] = {};
-  }
-
-  if (subscribers[providerName][normalizedKey] === undefined) {
-    subscribers[providerName][normalizedKey] = {};
-  }
-
-  const id = nextSubscriberId;
-  nextSubscriberId++;
-  subscribers[providerName][normalizedKey][id] = callback;
-
-  if (callImmediately) {
-    const source = getSource(providerName, normalizedKey);
-    if (source !== undefined) {
-      callback(source, key, key);
-    }
-  }
-
-  const unsubscribe = () => {
-    delete subscribers[providerName][normalizedKey][id];
-  };
-
-  return unsubscribe;
+  return addSubscriber(providerName, key, callback, callImmediately, getSource);
 };
 
 export const subscribeAll = (providerName, callback, callImmediately) => {
-  if (typeof callback !== 'function') {
-    throw new Error('Callback is not a function');
-  }
-
-  if (subscribersAll[providerName] === undefined) {
-    subscribersAll[providerName] = {};
-  }
-
-  const id = nextSubscriberId;
-  nextSubscriberId++;
-  subscribersAll[providerName][id] = callback;
-
-  if (callImmediately) {
-    const sources = getSources(providerName);
-    Object.getOwnPropertyNames(sources || {}).forEach(key => {
-      const rawSource = getRawSource(providerName, key);
-      if (rawSource.__fromProvider__) {
-        const source = sources[key];
-        callback(source, key);
-      }
-    });
-  }
-
-  const unsubscribe = () => {
-    delete subscribersAll[providerName][id];
-  };
-
-  return unsubscribe;
+  return addSubscriberAll(providerName, callback, callImmediately, getSources, getRawSource);
 };
 
 export const clearSources = (providerName) => {
@@ -419,10 +295,10 @@ export const sourcesChanged = (providerName, sourceChanges) => {
         }
 
         providerSources.getterValues[normalizedKeyPartsJoined] = getSourceObject(providerName, sourceKey);
-        providerSources.setters[normalizedKeyPartsJoined] = () => {};
+        providerSources.setters[normalizedKeyPartsJoined] = () => { };
         Object.defineProperty(providerSources.sources, normalizedKeyPartsJoined, {
           configurable: true,
-          set(value) {     
+          set(value) {
             const providerSources = sources[providerName];
 
             if (typeof providerSources === 'undefined') {
@@ -475,6 +351,6 @@ export const sourcesChanged = (providerName, sourceChanges) => {
       rawSources = rawSources[keyPart].__sources__;
     });
 
-    notifySubscribers(providerName, key);
+    notifySubscribers(providerName, key, getSource);
   }
 };
