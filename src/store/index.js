@@ -72,7 +72,7 @@ class Store {
   
     const SourceProvider = this.providerTypes[providerType];
   
-    this.providers[providerName] = new SourceProvider(providerName, {
+    this.providers[providerName] = new SourceProvider(this, providerName, {
       ...SourceProvider.settingsDefaults,
       ...settings
     });
@@ -156,7 +156,18 @@ class Store {
   subscribeAll(providerName, callback, callImmediately) {
     return this.sources.subscribeAll(providerName, callback, callImmediately);
   };
+
+  sourcesChanged(providerName, sourceChanges) {
+    return this.sources.sourcesChanged(providerName, sourceChanges);
+  }
+
+  clearSources(providerName) {
+    return this.sources.clearSources(providerName);
+  }
   
+  sourcesRemoved(providerName, sourceRemovals) {
+    return this.sources.sourcesRemoved(providerName, sourceRemovals);
+  }
 }
 
 export default Store;

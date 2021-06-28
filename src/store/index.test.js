@@ -1,5 +1,5 @@
 import SourceProvider from '../source-provider';
-import * as mockSources from './sources';
+import Sources from './sources';
 import Store from './index';
 
 jest.mock('./sources');
@@ -147,7 +147,7 @@ describe('index.js', () => {
     store.removeSourceProvider('TestProvider');
     provider.updateSource('/a', 2);
     triggerUpdate();
-    expect(mockSources.sourcesChanged).toHaveBeenCalledTimes(2);
+    expect(store.sources.sourcesChanged).toHaveBeenCalledTimes(2);
     expect(store.hasSourceProvider('TestProvider')).toBe(false);
     expect(store.getSourceProvider('TestProvider')).toBe(undefined);
   });
