@@ -1,5 +1,5 @@
 import { getSourceProvider } from '../index';
-import SourcesClass from './sources';
+import SourcesClass from './index';
 
 const mockUserUpdate = jest.fn();
 
