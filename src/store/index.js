@@ -1,5 +1,4 @@
-import { sourcesObject } from './sources';
-
+import Sources from './sources';
 
 /**
  @module @webbitjs/store
@@ -12,6 +11,7 @@ class Store {
     this.defaultSourceProvider = null;
     this.sourceProviderListeners = [];
     this.defaultSourceProviderListeners = [];
+    this.sources = new Sources(this);
   }
 
   /**
@@ -132,80 +132,31 @@ class Store {
   getDefaultSourceProvider () {
     return this.defaultSourceProvider;
   }
+
+  getRawSources(providerName) {
+    return this.sources.getRawSources(providerName);
+  };
+  
+  getRawSource(providerName, key) {
+    return this.sources.getRawSource(providerName, key);
+  }
+  
+  getSources(providerName) {
+    return this.sources.getSources(providerName);
+  };
+  
+  getSource(providerName, key) {
+    return this.sources.getSource(providerName, key);
+  };
+  
+  subscribe(providerName, key, callback, callImmediately) {
+    return this.sources.subscribe(providerName, key, callback, callImmediately);
+  };
+  
+  subscribeAll(providerName, callback, callImmediately) {
+    return this.sources.subscribeAll(providerName, callback, callImmediately);
+  };
+  
 }
 
 export default Store;
-
-const store = new Store();
-
-export const addSourceProviderType = (constructor) => {
-  store.addSourceProviderType(constructor);
-}
-
-export const hasSourceProviderType = (typeName) => {
-  return store.hasSourceProviderType(typeName);
-}
-
-export const addSourceProvider = (providerType, providerName, settings) => {
-  return store.addSourceProvider(providerType, providerName, settings);
-};
-
-export const sourceProviderAdded = (listener) => {
-  store.sourceProviderAdded(listener);
-};
-
-export const removeSourceProvider = (providerName) => {
-  store.removeSourceProvider(providerName);
-}
-
-export const getSourceProvider = (providerName) => {
-  return store.getSourceProvider(providerName);
-};
-
-export const getSourceProviderTypeNames = () => {
-  return store.getSourceProviderTypeNames();
-};
-
-export const getSourceProviderNames = () => {
-  return store.getSourceProviderNames();
-};
-
-export const hasSourceProvider = (providerName) => {
-  return store.hasSourceProvider(providerName);
-};
-
-export const setDefaultSourceProvider = (providerName) => {
-  store.setDefaultSourceProvider(providerName);
-};
-
-export const getDefaultSourceProvider = () => {
-  return store.getDefaultSourceProvider();
-};
-
-export const defaultSourceProviderSet = (listener) => {
-  store.defaultSourceProviderSet(listener);
-};
-
-export const getRawSources = (providerName) => {
-  return sourcesObject.getRawSources(providerName);
-};
-
-export const getRawSource = (providerName, key) => {
-  return sourcesObject.getRawSource(providerName, key);
-}
-
-export const getSources = (providerName) => {
-  return sourcesObject.getSources(providerName);
-};
-
-export const getSource = (providerName, key) => {
-  return sourcesObject.getSource(providerName, key);
-};
-
-export const subscribe = (providerName, key, callback, callImmediately) => {
-  return sourcesObject.subscribe(providerName, key, callback, callImmediately);
-};
-
-export const subscribeAll = (providerName, callback, callImmediately) => {
-  return sourcesObject.subscribeAll(providerName, callback, callImmediately);
-};
