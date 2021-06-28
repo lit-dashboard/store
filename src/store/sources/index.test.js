@@ -1,9 +1,6 @@
-import { getSourceProvider } from '../index';
 import SourcesClass from './index';
 
 const mockUserUpdate = jest.fn();
-
-jest.mock('../index');
 
 describe('sources.js', () => {
 
@@ -30,10 +27,12 @@ describe('sources.js', () => {
   }
 
   beforeEach(() => {
-    getSourceProvider.mockReturnValue({
-      userUpdate: mockUserUpdate
-    });
-    sources = new SourcesClass();
+    const store = {
+      getSourceProvider: () => ({
+        userUpdate: mockUserUpdate
+      })
+    };
+    sources = new SourcesClass(store);
   });
 
   describe('getRawSources', () => {
@@ -213,9 +212,6 @@ describe('sources.js', () => {
 
     it(`changes the source value`, () => {
       addSources();
-      getSourceProvider.mockReturnValue({
-        userUpdate: mockUserUpdate
-      });
       const source = sources.getSource('Provider', '/a/b');
       source.c = true;
       expect(mockUserUpdate).toHaveBeenCalledTimes(1);

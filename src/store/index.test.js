@@ -1,5 +1,6 @@
 import SourceProvider from '../source-provider';
 import * as mockSources from './sources';
+import Store from './index';
 
 jest.mock('./sources');
 
@@ -36,7 +37,7 @@ describe('index.js', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.useFakeTimers();
-    store = require('./index');
+    store = new Store();
   });
 
   it('fails to add a source provider type without a typeName', () => {

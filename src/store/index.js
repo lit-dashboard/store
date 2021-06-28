@@ -1,14 +1,20 @@
+import { sourcesObject } from './sources';
+
+
 /**
  @module @webbitjs/store
 */
+class Store {
 
-const providerTypes = {};
-const providers = {};
-let defaultSourceProvider = null;
-const sourceProviderListeners = [];
-const defaultSourceProviderListeners = [];
+  constructor() {
+    this.providerTypes = {};
+    this.providers = {};
+    this.defaultSourceProvider = null;
+    this.sourceProviderListeners = [];
+    this.defaultSourceProviderListeners = [];
+  }
 
-/**
+  /**
  * Adds a provider type.
  * 
  * @function
@@ -23,116 +29,183 @@ const defaultSourceProviderListeners = [];
  * 
  * @param {SourceProvider} constructor - The source provider class
  */
-export const addSourceProviderType = (constructor) => {
+  addSourceProviderType(constructor) {
+
+    const { typeName } = constructor;
+
+    if (typeof typeName !== 'string') {
+      throw new Error('A typeName for your source provider type must be set.');
+    }
+
+    if (this.hasSourceProviderType(typeName)) {
+      throw new Error('A source provider type with the same name has already been added.');
+    }
+
+    if (constructor.__WEBBIT_CLASSNAME__ === 'SourceProvider') {
+      this.providerTypes[typeName] = constructor;
+    }
+  }
+
+  hasSourceProviderType(typeName) {
+    return typeName in this.providerTypes;
+  }
+
+  hasSourceProvider (providerName) {
+    return providerName in this.providers;
+  }
+
+  addSourceProvider(providerType, providerName, settings) {
+
+    settings = settings || {};
   
-  const { typeName } = constructor;
-
-  if (typeof typeName !== 'string') {
-    throw new Error('A typeName for your source provider type must be set.');
+    if (typeof providerName !== 'string') {
+      providerName = providerType;
+    }
+  
+    if (!this.hasSourceProviderType(providerType)) {
+      throw new Error(`A source provider type with that name hasn't been added.`);
+    }
+  
+    if (this.hasSourceProvider(providerName)) {
+      throw new Error('A source provider with that name has already been added.');
+    }
+  
+    const SourceProvider = this.providerTypes[providerType];
+  
+    this.providers[providerName] = new SourceProvider(providerName, {
+      ...SourceProvider.settingsDefaults,
+      ...settings
+    });
+  
+    this.sourceProviderListeners.forEach(listener => {
+      listener(providerName);
+    });
+    return this.providers[providerName];
   }
 
-  if (hasSourceProviderType(typeName)) {
-    throw new Error('A source provider type with the same name has already been added.');
+  sourceProviderAdded(listener) {
+    if (typeof listener !== 'function') {
+      throw new Error('listener is not a function');
+    }
+  
+    this.sourceProviderListeners.push(listener);
   }
 
-  if (constructor.__WEBBIT_CLASSNAME__ === 'SourceProvider') {
-    providerTypes[typeName] = constructor;
+  removeSourceProvider(providerName) {
+    if (!this.hasSourceProvider(providerName)) {
+      return;
+    }
+  
+    const provider = this.providers[providerName];
+    provider._disconnect();
+    delete this.providers[providerName];
   }
+
+  getSourceProvider(providerName) {
+    return this.providers[providerName];
+  }
+  
+  getSourceProviderTypeNames() {
+    return Object.keys(this.providerTypes);
+  }
+  
+  getSourceProviderNames() {
+    return Object.keys(this.providers);
+  };
+
+  setDefaultSourceProvider(providerName) {
+    this.defaultSourceProvider = providerName;
+  
+    this.defaultSourceProviderListeners.forEach(listener => {
+      listener(this.defaultSourceProvider);
+    });
+  }
+
+  defaultSourceProviderSet(listener) {
+    if (typeof listener !== 'function') {
+      throw new Error('listener is not a function');
+    }
+  
+    this.defaultSourceProviderListeners.push(listener);
+  }
+
+  getDefaultSourceProvider () {
+    return this.defaultSourceProvider;
+  }
+}
+
+export default Store;
+
+const store = new Store();
+
+export const addSourceProviderType = (constructor) => {
+  store.addSourceProviderType(constructor);
 }
 
 export const hasSourceProviderType = (typeName) => {
-  return typeName in providerTypes;
+  return store.hasSourceProviderType(typeName);
 }
 
 export const addSourceProvider = (providerType, providerName, settings) => {
-
-  settings = settings || {};
-  
-  if (typeof providerName !== 'string') {
-    providerName = providerType;
-  }
-
-  if (!hasSourceProviderType(providerType)) {
-    throw new Error(`A source provider type with that name hasn't been added.`);
-  }
-
-  if (hasSourceProvider(providerName)) {
-    throw new Error('A source provider with that name has already been added.');
-  }
-
-  const SourceProvider = providerTypes[providerType];
-
-  providers[providerName] = new SourceProvider(providerName, {
-    ...SourceProvider.settingsDefaults,
-    ...settings
-  });
-
-  sourceProviderListeners.forEach(listener => {
-    listener(providerName);
-  }); 
-  return providers[providerName];
+  return store.addSourceProvider(providerType, providerName, settings);
 };
 
 export const sourceProviderAdded = (listener) => {
-
-  if (typeof listener !== 'function') {
-    throw new Error('listener is not a function');
-  }
-
-  sourceProviderListeners.push(listener);
+  store.sourceProviderAdded(listener);
 };
 
 export const removeSourceProvider = (providerName) => {
-  if (!hasSourceProvider(providerName)) {
-    return;
-  }
-
-  const provider = providers[providerName];
-  provider._disconnect();
-  delete providers[providerName];
+  store.removeSourceProvider(providerName);
 }
 
 export const getSourceProvider = (providerName) => {
-  return providers[providerName];
+  return store.getSourceProvider(providerName);
 };
 
 export const getSourceProviderTypeNames = () => {
-  return Object.keys(providerTypes);
+  return store.getSourceProviderTypeNames();
 };
 
 export const getSourceProviderNames = () => {
-  return Object.keys(providers);
+  return store.getSourceProviderNames();
 };
 
 export const hasSourceProvider = (providerName) => {
-  return providerName in providers;
+  return store.hasSourceProvider(providerName);
 };
 
 export const setDefaultSourceProvider = (providerName) => {
-  defaultSourceProvider = providerName;
-
-  defaultSourceProviderListeners.forEach(listener => {
-    listener(defaultSourceProvider);
-  }); 
+  store.setDefaultSourceProvider(providerName);
 };
 
 export const getDefaultSourceProvider = () => {
-  return defaultSourceProvider;
+  return store.getDefaultSourceProvider();
 };
 
 export const defaultSourceProviderSet = (listener) => {
-  if (typeof listener !== 'function') {
-    throw new Error('listener is not a function');
-  }
-
-  defaultSourceProviderListeners.push(listener);
+  store.defaultSourceProviderSet(listener);
 };
 
-export { 
-  getRawSource, 
-  getRawSources, 
-  getSources, 
-  getSource, 
-  subscribe, 
-  subscribeAll
-} from './sources';
+export const getRawSources = (providerName) => {
+  return sourcesObject.getRawSources(providerName);
+};
+
+export const getRawSource = (providerName, key) => {
+  return sourcesObject.getRawSource(providerName, key);
+}
+
+export const getSources = (providerName) => {
+  return sourcesObject.getSources(providerName);
+};
+
+export const getSource = (providerName, key) => {
+  return sourcesObject.getSource(providerName, key);
+};
+
+export const subscribe = (providerName, key, callback, callImmediately) => {
+  return sourcesObject.subscribe(providerName, key, callback, callImmediately);
+};
+
+export const subscribeAll = (providerName, callback, callImmediately) => {
+  return sourcesObject.subscribeAll(providerName, callback, callImmediately);
+};

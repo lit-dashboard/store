@@ -2,16 +2,15 @@ import SourceObjects from './source-object';
 import Subscribers from './subscribers';
 import { normalizeKey } from '../../util';
 import { createRawSource, createSource, isSourceType } from './source-factory';
-import { getSourceProvider } from '../index';
-
 
 class Sources {
 
-  constructor() {
+  constructor(store) {
     this.rawSources = {};
     this.sources = {};
     this.sourceObjects = new SourceObjects(this.sources);
     this.subscribers = new Subscribers(this);
+    this.store = store;
   }
 
   cleanSource(providerName, rawSources, normalizedKeyParts) {
@@ -266,7 +265,7 @@ class Sources {
             providerSources.getterValues[normalizedKeyPartsJoined] = value;
           }
   
-          const sourceProvider = getSourceProvider(providerName);
+          const sourceProvider = this.store.getSourceProvider(providerName);
           providerSources.setters[normalizedKeyPartsJoined] = (value) => {
             sourceProvider.userUpdate(sourceKey, value);
           };
@@ -301,7 +300,7 @@ class Sources {
 
 export default Sources;
 
-const sourcesObject = new Sources();
+export const sourcesObject = new Sources();
 
 export const getRawSources = (providerName) => {
   return sourcesObject.getRawSources(providerName);
