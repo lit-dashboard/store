@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>webbitStore</title>
+  </head>
+  <body>
+    <div id="sources"></div>
+    <script type="module">
+      import store from './gamepad.js';
+      import { render, html } from 'lit-html';
+
+      // console.log('Store', store);
+
+      const template = () => html`
+        <sources-view provider="Gamepad" .store="${store}"></sources-view>
+      `;
+      render(template(), document.querySelector('#sources'))
+      console.log('store:', store);
+    </script>
+  </body>
+</html>
