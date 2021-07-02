@@ -1,14 +1,3 @@
-import { 
-  subscribe,
-  subscribeAll,
-  sourcesChanged,
-  getRawSource,
-  getSource,
-  getSources,
-  clearSources, 
-  sourcesRemoved
-} from './store/sources';
-
 class SourceProvider {
 
   static get __WEBBIT_CLASSNAME__() {
@@ -31,7 +20,7 @@ class SourceProvider {
    * @abstract
    * @param {string} providerName - The name of the provider.
    */
-  constructor(providerName, settings) {
+  constructor(store, providerName, settings) {
 
     if (new.target === SourceProvider) {
       throw new TypeError("Cannot construct SourceProvider instances directly.");
@@ -49,6 +38,7 @@ class SourceProvider {
       throw new Error("A typeName string must be defined.");
     }
 
+    this.store = store;
     this._providerName = providerName;
     this.settings = {
       ...this.constructor.settingsDefaults,
@@ -126,7 +116,7 @@ class SourceProvider {
    * immediately with the source's current value.
    */
   subscribe(key, callback, callImmediately) {
-    return subscribe(this._providerName, key, callback, callImmediately);
+    return this.store.subscribe(this._providerName, key, callback, callImmediately);
   }
 
   /**
@@ -138,7 +128,7 @@ class SourceProvider {
    * immediately with the source's current value.
    */
   subscribeAll(callback, callImmediately) {
-    return subscribeAll(this._providerName, callback, callImmediately);
+    return this.store.subscribeAll(this._providerName, callback, callImmediately);
   }
 
   /**
@@ -148,18 +138,18 @@ class SourceProvider {
    * by '/'.
    */
   getSource(key) {
-    return getSource(this._providerName, key);
+    return this.store.getSource(this._providerName, key);
   }
 
   getRawSource(key) {
-    return getRawSource(this._providerName, key);
+    return this.store.getRawSource(this._providerName, key);
   }
 
   /**
    * Gets all sources
    */
   getSources() {
-    return getSources(this._providerName);
+    return this.store.getSources(this._providerName);
   }
 
   /**
@@ -174,7 +164,7 @@ class SourceProvider {
     // send updates now to prevent them from being incorrectly sent after
     // sources were cleared.
     this._sendUpdates(() => {
-      clearSources(this._providerName);
+      this.store.clearSources(this._providerName);
       if (typeof callback === 'function') {
         callback();
       }
@@ -286,7 +276,7 @@ class SourceProvider {
       }
     }
     if (Object.keys(changes).length > 0) {
-      sourcesChanged(this._providerName, changes);
+      this.store.sourcesChanged(this._providerName, changes);
     }
   }
 
@@ -299,7 +289,7 @@ class SourceProvider {
     }
 
     if (removals.length > 0) {
-      sourcesRemoved(this._providerName, removals);
+      this.store.sourcesRemoved(this._providerName, removals);
     }
   }
 }
