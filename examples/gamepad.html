@@ -11,8 +11,6 @@
       import store from './gamepad.js';
       import { render, html } from 'lit-html';
 
-      // console.log('Store', store);
-
       const template = () => html`
         <sources-view provider="Gamepad" .store="${store}"></sources-view>
       `;
