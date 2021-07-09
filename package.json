@@ -1,15 +1,18 @@
 {
   "name": "@webbitjs/store",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "",
   "files": [
     "dist",
     "src"
   ],
-  "main": "./dist/webbit-store.umd.js",
-  "module": "./dist/webbit-store.es.js",
+  "main": "./dist/store.umd.js",
+  "module": "./dist/store.es.js",
   "exports": {
-    ".": "./src/index.js"
+    ".": {
+      "import": "./dist/store.es.js",
+      "require": "./dist/store.umd.js"
+    }
   },
   "scripts": {
     "test": "jest",
